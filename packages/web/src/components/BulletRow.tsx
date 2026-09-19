@@ -17,6 +17,8 @@ export interface RowHandlers {
   convertToFolder(rowIndex: number): void;
   inlineFolder(rowIndex: number): void;
   remove(rowIndex: number): void;
+  indent(rowIndex: number, caret?: number): void;
+  outdent(rowIndex: number, caret?: number): void;
 }
 
 interface Props {
@@ -223,6 +225,28 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
           )}
         </div>
         <div className="row-actions">
+          <button
+            className="indent-btn"
+            tabIndex={-1}
+            disabled={rowIsTopOfRoot(row)}
+            title="Outdent (Shift+Tab)"
+            aria-label="Outdent"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => handlers.outdent(rowIndex)}
+          >
+            ←
+          </button>
+          <button
+            className="indent-btn"
+            tabIndex={-1}
+            disabled={row.index === 0}
+            title="Indent (Tab)"
+            aria-label="Indent"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => handlers.indent(rowIndex)}
+          >
+            →
+          </button>
           <button className="more" tabIndex={-1} onMouseDown={(e) => e.preventDefault()} onClick={() => setMenuOpen((v) => !v)} title="Actions">
             ⋯
           </button>
@@ -245,6 +269,11 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
       )}
     </div>
   );
+}
+
+/** Top-level rows of the zoomed root list have nothing to outdent to. */
+function rowIsTopOfRoot(row: Row): boolean {
+  return row.depth === 0 && row.parentId === null;
 }
 
 function autosize(el: HTMLTextAreaElement) {

@@ -103,6 +103,53 @@ export function Outline() {
       if (!confirm(`Inline "${r.bullet.text}" back into this list? Its Outline File will be moved to the trash.`)) return;
       ops.inlineFolder(r.filePath, r.bullet);
     },
+    /** Make the bullet the last child of its previous sibling (Tab). */
+    indent(i, caret) {
+      const r = rows[i];
+      if (!r) return;
+      const b = r.bullet;
+      const from: ops.Position = { filePath: r.filePath, parentId: r.parentId, index: r.index };
+      const prev = r.siblings[r.index - 1];
+      if (!prev) return;
+      const c = caret ?? b.text.length;
+      if (isFolderBullet(prev)) {
+        // nest under a Folder Bullet: its children live in its Outline File, which may not be loaded yet
+        const cf = rows.find((x) => x.bullet.id === prev.id)?.childFile;
+        if (!cf) return;
+        ensureFileLoaded(cf).then((ok) => {
+          if (!ok) return;
+          const target = useStore.getState().files[cf];
+          useStore.getState().setFolderExpanded(prev.id, true);
+          ops.moveTo(b.id, from, { filePath: cf, parentId: null, index: target?.bullets.length ?? 0 });
+          setFocus({ id: b.id, caret: c });
+        });
+        return;
+      }
+      useStore.getState().setCollapsed(prev.id, false);
+      ops.moveTo(b.id, from, { filePath: r.filePath, parentId: prev.id, index: prev.children.length });
+      setFocus({ id: b.id, caret: c });
+    },
+    /** Move the bullet out to sit right after its parent (Shift+Tab). Top-level bullets of a Folder Bullet's file move to the parent file. */
+    outdent(i, caret) {
+      const r = rows[i];
+      if (!r) return;
+      const b = r.bullet;
+      const from: ops.Position = { filePath: r.filePath, parentId: r.parentId, index: r.index };
+      const c = caret ?? b.text.length;
+      if (r.parentId === null) {
+        // top of an Outline File: the Folder Bullet that owns it is the effective parent
+        const owner = rows.find((x) => x.childFile === r.filePath);
+        if (!owner) return;
+        ops.moveTo(b.id, from, { filePath: owner.filePath, parentId: owner.parentId, index: owner.index + 1 });
+        setFocus({ id: b.id, caret: c });
+        return;
+      }
+      const f = files[r.filePath];
+      const ploc = f ? findBullet(f.bullets, r.parentId) : null;
+      if (!ploc) return;
+      ops.moveTo(b.id, from, { filePath: r.filePath, parentId: ploc.parent?.id ?? null, index: ploc.index + 1 });
+      setFocus({ id: b.id, caret: c });
+    },
     remove(i) {
       const r = rows[i];
       if (!r) return;
@@ -173,32 +220,8 @@ export function Outline() {
 
       if (e.key === "Tab") {
         e.preventDefault();
-        if (e.shiftKey) {
-          if (r.parentId === null) return;
-          const f = files[r.filePath];
-          const ploc = f ? findBullet(f.bullets, r.parentId) : null;
-          if (!ploc) return;
-          ops.moveTo(b.id, from, { filePath: r.filePath, parentId: ploc.parent?.id ?? null, index: ploc.index + 1 });
-        } else {
-          const prev = r.siblings[r.index - 1];
-          if (!prev) return;
-          if (isFolderBullet(prev)) {
-            // nest under a Folder Bullet: its children live in its Outline File, which may not be loaded yet
-            const cf = rows.find((x) => x.bullet.id === prev.id)?.childFile;
-            if (!cf) return;
-            ensureFileLoaded(cf).then((ok) => {
-              if (!ok) return;
-              const target = useStore.getState().files[cf];
-              useStore.getState().setFolderExpanded(prev.id, true);
-              ops.moveTo(b.id, from, { filePath: cf, parentId: null, index: target?.bullets.length ?? 0 });
-              setFocus({ id: b.id, caret });
-            });
-          } else {
-            useStore.getState().setCollapsed(prev.id, false);
-            ops.moveTo(b.id, from, { filePath: r.filePath, parentId: prev.id, index: prev.children.length });
-          }
-        }
-        setFocus({ id: b.id, caret });
+        if (e.shiftKey) handlers.outdent(i, caret);
+        else handlers.indent(i, caret);
         return;
       }
 

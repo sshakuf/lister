@@ -1,3 +1,4 @@
+import { FontSizeControl } from "./FontSizeControl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { AdminReport } from "../types";
@@ -51,6 +52,10 @@ export function Admin() {
   return (
     <div className="admin">
       <h1>Admin</h1>
+      <section>
+        <h2>Display</h2>
+        <FontSizeControl />
+      </section>
       {error && <div className="error-inline">{error}</div>}
       {!report && <div>Loading…</div>}
       {report && (

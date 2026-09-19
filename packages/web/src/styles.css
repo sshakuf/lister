@@ -54,7 +54,7 @@ html, body, #root { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--fg);
-  font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  font: var(--font-size, 15px)/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
 }
 button { font: inherit; color: inherit; background: none; border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
 button:hover { background: var(--hover); }
@@ -126,9 +126,15 @@ main { flex: 1; }
 .pill.prio.p3 { color: var(--c-grey); }
 .pill.donepill { color: var(--ok); }
 .note { color: var(--muted); font-size: 13px; white-space: pre-wrap; padding-bottom: 4px; }
-.row-actions { position: relative; opacity: 0; }
-.row-line:hover .row-actions { opacity: 1; }
-.more { border: none; color: var(--faint); padding: 0 8px; height: 26px; }
+.row-actions { position: relative; opacity: 0; display: flex; align-items: center; gap: 2px; }
+.row-line:hover .row-actions, .row.editing .row-actions { opacity: 1; }
+.more, .indent-btn { border: none; color: var(--faint); padding: 0 8px; height: 26px; min-width: 26px; }
+.indent-btn:disabled { opacity: .3; cursor: default; background: none; }
+/* touch devices: no hover, so keep the controls visible and finger-sized */
+@media (hover: none), (pointer: coarse) {
+  .row-actions { opacity: 1; }
+  .more, .indent-btn { height: 36px; min-width: 36px; font-size: 16px; }
+}
 .menu { position: absolute; right: 0; top: 26px; background: var(--modal); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); display: flex; flex-direction: column; min-width: 220px; z-index: 10; padding: 4px; }
 .menu button { border: none; text-align: left; padding: 6px 10px; border-radius: 6px; }
 .add-row { border: none; color: var(--faint); margin-top: 8px; padding: 4px 8px; }
@@ -195,3 +201,9 @@ main { flex: 1; }
 .ac-hint { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ac-foot { color: var(--muted); font-size: 11px; padding: 5px 8px 3px; border-top: 1px solid var(--line); margin-top: 3px; }
 .kind-red { color: #dc2626; } .kind-green { color: #16a34a; } .kind-blue { color: #2563eb; } .kind-yellow { color: #ca8a04; } .kind-purple { color: #9333ea; } .kind-grey { color: #6b7280; }
+
+/* admin: display prefs */
+.font-control { display: inline-flex; align-items: center; gap: 8px; }
+.font-control button { min-width: 36px; height: 32px; font-size: 16px; }
+.font-control .val { min-width: 48px; text-align: center; font-family: ui-monospace, Menlo, monospace; }
+.font-preview { margin-top: 10px; padding: 8px 12px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); }
