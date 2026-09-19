@@ -26,3 +26,15 @@ export const useUi = create<UiState>((set) => ({
   closePicker: () => set({ picker: null }),
   tick: () => set((s) => ({ changeTick: s.changeTick + 1 })),
 }));
+
+/**
+ * Set while a finger is on the edit toolbar / action sheet. The focused bullet uses it to
+ * ignore the blur iOS Safari fires when a fixed-position button is tapped, keeping the keyboard up.
+ */
+let toolbarTouchUntil = 0;
+export function markToolbarTouch(): void {
+  toolbarTouchUntil = Date.now() + 700;
+}
+export function toolbarTouching(): boolean {
+  return Date.now() < toolbarTouchUntil;
+}

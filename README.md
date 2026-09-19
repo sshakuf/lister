@@ -87,7 +87,7 @@ packages/web     React outliner + admin
 skill/           the agent Skill document `lister skill install` distributes
 ```
 
-`pnpm test` runs every package's tests. `pnpm dev` runs the server with reload; `pnpm --filter @lister/web dev` runs the web client with a proxy to it.
+`pnpm test` runs every package's tests. `packages/web/e2e/ios-toolbar.cjs` drives the mobile toolbar with emulated touch (Chromium or WebKit) against a running server; it adds and removes two scratch bullets. `pnpm dev` runs the server with reload; `pnpm --filter @lister/web dev` runs the web client with a proxy to it.
 
 ## File format in 10 seconds
 

@@ -3,6 +3,8 @@ import { useStore } from "../store";
 import type { Row } from "../tree";
 import type { RowHandlers } from "./BulletRow";
 import { RowMenu } from "./RowMenu";
+import { TapButton } from "./TapButton";
+import { markToolbarTouch } from "../ui";
 
 interface Props {
   rows: Row[];
@@ -27,13 +29,18 @@ function useKeyboardOffset(): number {
   return bottom;
 }
 
-/** Insert text at the caret of the focused bullet's textarea through the browser's editing pipeline so React sees it. */
+/**
+ * Insert text at the caret of the focused bullet's textarea through the browser's editing pipeline so React sees it.
+ * A shorthand token (`@…`, `[…`) must start a word, so a space is added when the caret follows a non-space.
+ */
 function insertAtCaret(id: string, text: string) {
   const ta = document.querySelector<HTMLTextAreaElement>(`[data-id="${id}"] textarea`);
   if (!ta) return;
   ta.focus();
-  if (!document.execCommand("insertText", false, text)) {
-    ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, "end");
+  const before = ta.value.slice(0, ta.selectionStart);
+  const insert = before && !/\s$/.test(before) ? " " + text : text;
+  if (!document.execCommand("insertText", false, insert)) {
+    ta.setRangeText(insert, ta.selectionStart, ta.selectionEnd, "end");
     ta.dispatchEvent(new Event("input", { bubbles: true }));
   }
 }
@@ -52,12 +59,12 @@ export function EditToolbar({ rows, handlers }: Props) {
   const keep = (e: React.SyntheticEvent) => e.preventDefault(); // do not steal focus from the textarea
   const refocus = () => useStore.getState().setFocus({ id: r.bullet.id, caret: focus.caret });
   const btn = (label: string, title: string, fn: () => void, disabled = false) => (
-    <button key={title} title={title} aria-label={title} disabled={disabled} onMouseDown={keep} onTouchStart={keep} onClick={fn}>
+    <TapButton key={title} title={title} aria-label={title} disabled={disabled} onTap={fn}>
       {label}
-    </button>
+    </TapButton>
   );
   return (
-    <div className="edit-toolbar" style={{ bottom }} onMouseDown={keep}>
+    <div className="edit-toolbar" style={{ bottom }} onMouseDown={keep} onTouchStart={markToolbarTouch}>
       {menu && <RowMenu row={r} rowIndex={i} handlers={handlers} close={() => setMenu(false)} className="menu sheet" />}
       <div className="edit-toolbar-row">
         {btn("⇤", "Outdent", () => handlers.outdent(i), r.depth === 0 && r.parentId === null)}

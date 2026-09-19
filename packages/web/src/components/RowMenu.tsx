@@ -3,6 +3,7 @@ import { isFolderBullet } from "../types";
 import { hasStyle, toggleStyle, checkState, setChecked, addCheckbox, removeCheckbox } from "../format";
 import * as ops from "../ops";
 import type { RowHandlers } from "./BulletRow";
+import { TapButton } from "./TapButton";
 
 interface Props {
   row: Row;
@@ -22,17 +23,16 @@ export function RowMenu({ row, rowIndex, handlers, close, className = "menu" }: 
     if (text !== b.text) ops.patchBullet(row.filePath, b.id, { text });
   };
   const item = (label: string, fn: () => void, cls = "") => (
-    <button
+    <TapButton
       key={label}
       className={cls}
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={() => {
+      onTap={() => {
         close();
         fn();
       }}
     >
       {label}
-    </button>
+    </TapButton>
   );
   return (
     <div className={className} role="menu">

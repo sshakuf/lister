@@ -9,6 +9,7 @@ import { RowMenu } from "./RowMenu";
 import { BulletText } from "./BulletText";
 import { AnnotationMenu } from "./AnnotationMenu";
 import { useStore } from "../store";
+import { toolbarTouching } from "../ui";
 
 export interface RowHandlers {
   onKeyDown(rowIndex: number, e: React.KeyboardEvent<HTMLTextAreaElement>, draft: string, setDraft: (v: string) => void): void;
@@ -175,6 +176,11 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
               onClick={(e) => setCaretPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
               onBlur={() => {
                 if (dirty.current) commitNow(draft);
+                if (toolbarTouching()) {
+                  // iOS Safari blurs the textarea when a fixed toolbar button is tapped; keep editing
+                  requestAnimationFrame(() => ta.current?.focus({ preventScroll: true }));
+                  return;
+                }
                 if (useStore.getState().focus?.id === b.id) setFocus(null);
               }}
               onKeyDown={(e) => {
@@ -202,7 +208,10 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
                   dirty.current = false;
                 }
                 handlers.onKeyDown(rowIndex, e, draft, (v) => {
-                  dirty.current = true;
+                  // the key handler persists this change itself (shorthand conversion), so a
+                  // delayed commit from earlier typing must not overwrite it with stale text
+                  cancelPending();
+                  dirty.current = false;
                   setDraft(v);
                 });
               }}
