@@ -12,6 +12,19 @@ import { BulletRow, type RowHandlers } from "./BulletRow";
 import { Breadcrumbs } from "./Breadcrumbs";
 
 const isMac = navigator.platform.toLowerCase().includes("mac");
+
+/** Load an Outline File into the store if it is not there yet. Resolves false (and shows the error) on failure. */
+async function ensureFileLoaded(filePath: string): Promise<boolean> {
+  const st = useStore.getState();
+  if (st.files[filePath]) return true;
+  try {
+    await st.loadFile(filePath);
+    return true;
+  } catch (e) {
+    st.setError((e as Error).message);
+    return false;
+  }
+}
 const mod = (e: React.KeyboardEvent | KeyboardEvent) => (isMac ? e.metaKey : e.ctrlKey);
 
 export function Outline() {
@@ -54,10 +67,13 @@ export function Outline() {
   };
 
   const handlers: RowHandlers = useMemo(() => ({
-    commit(i, draft) {
-      const r = rows[i];
-      if (!r || draft === r.bullet.text) return;
-      ops.patchBullet(r.filePath, r.bullet.id, { text: draft });
+    commit(filePath, id, draft) {
+      // Validate against the *current* store, not the row snapshot this closure was created with:
+      // the bullet may have been deleted or its text changed since the commit was scheduled.
+      const f = useStore.getState().files[filePath];
+      const loc = f ? findBullet(f.bullets, id) : null;
+      if (!loc || draft === loc.bullet.text) return;
+      ops.patchBullet(filePath, id, { text: draft });
     },
     zoom(i) {
       zoomIntoRow(rows, i);
@@ -144,8 +160,14 @@ export function Outline() {
         if (before !== b.text) ops.patchBullet(r.filePath, b.id, { text: before }, { undo: false });
         const goesInside = !isFolderBullet(b) && b.children.length > 0 && r.expanded && after === "" && before.length > 0;
         if (goesInside) ops.addBullet(r.filePath, b.id, 0, after);
-        else if (isFolderBullet(b) && r.expanded && r.childFile && files[r.childFile]) ops.addBullet(r.childFile, null, 0, after);
-        else ops.addBullet(r.filePath, r.parentId, r.index + 1, after);
+        else if (isFolderBullet(b) && r.expanded && r.childFile) {
+          // expanded Folder Bullet: new first child goes into its Outline File (load it if needed)
+          const cf = r.childFile;
+          ensureFileLoaded(cf).then((ok) => {
+            if (ok) ops.addBullet(cf, null, 0, after);
+            else ops.addBullet(r.filePath, r.parentId, r.index + 1, after);
+          });
+        } else ops.addBullet(r.filePath, r.parentId, r.index + 1, after);
         return;
       }
 
@@ -161,10 +183,16 @@ export function Outline() {
           const prev = r.siblings[r.index - 1];
           if (!prev) return;
           if (isFolderBullet(prev)) {
+            // nest under a Folder Bullet: its children live in its Outline File, which may not be loaded yet
             const cf = rows.find((x) => x.bullet.id === prev.id)?.childFile;
-            if (!cf || !files[cf]) return;
-            useStore.getState().setFolderExpanded(prev.id, true);
-            ops.moveTo(b.id, from, { filePath: cf, parentId: null, index: files[cf].bullets.length });
+            if (!cf) return;
+            ensureFileLoaded(cf).then((ok) => {
+              if (!ok) return;
+              const target = useStore.getState().files[cf];
+              useStore.getState().setFolderExpanded(prev.id, true);
+              ops.moveTo(b.id, from, { filePath: cf, parentId: null, index: target?.bullets.length ?? 0 });
+              setFocus({ id: b.id, caret });
+            });
           } else {
             useStore.getState().setCollapsed(prev.id, false);
             ops.moveTo(b.id, from, { filePath: r.filePath, parentId: prev.id, index: prev.children.length });

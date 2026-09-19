@@ -10,13 +10,18 @@ export interface Config {
   /** absolute path of the Root Outline file */
   rootFile: string;
   port: number;
+  /** interface to bind; 127.0.0.1 by default. Use 0.0.0.0 or a Tailscale IP to reach the app from other devices. */
+  host: string;
   recentFolders: string[];
 }
 
 export interface ServerInfo {
   port: number;
   pid: number;
+  host?: string;
 }
+
+export const DEFAULT_HOST = "127.0.0.1";
 
 export function listerDirFor(home = os.homedir()): string {
   return path.join(home, ".lister");
@@ -38,6 +43,7 @@ export function loadConfig(home = os.homedir()): Config {
     listerDir,
     rootFile: raw.rootFile ? expand(raw.rootFile, home) : path.join(listerDir, "root.lister"),
     port: typeof raw.port === "number" ? raw.port : DEFAULT_PORT,
+    host: typeof raw.host === "string" && raw.host.trim() ? raw.host.trim() : DEFAULT_HOST,
     recentFolders: Array.isArray(raw.recentFolders) ? raw.recentFolders.slice(0, 20) : [],
   };
   return cfg;
@@ -45,7 +51,7 @@ export function loadConfig(home = os.homedir()): Config {
 
 export function saveConfig(cfg: Config): void {
   const cfgPath = path.join(cfg.listerDir, "config.json");
-  const out = { rootFile: cfg.rootFile, port: cfg.port, recentFolders: cfg.recentFolders };
+  const out = { rootFile: cfg.rootFile, port: cfg.port, host: cfg.host, recentFolders: cfg.recentFolders };
   fs.writeFileSync(cfgPath, JSON.stringify(out, null, 2) + "\n");
 }
 
@@ -86,4 +92,10 @@ export function removeServerInfo(listerDir: string): void {
   } catch {
     /* ignore */
   }
+}
+
+/** Address a local client should use to reach a server bound to `host`. */
+export function clientHost(host: string | undefined): string {
+  if (!host || host === "0.0.0.0" || host === "::" || host === "[::]") return DEFAULT_HOST;
+  return host;
 }

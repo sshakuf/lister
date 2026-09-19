@@ -38,6 +38,17 @@ lister admin folders           # every Folder Bullet, broken ones, orphan files
 lister import workflowy.opml   # bring your Workflowy export in
 ```
 
+## Reaching it from other devices (Tailscale)
+
+The server binds `127.0.0.1` by default. To open the web app from your phone or another machine on your tailnet:
+
+```bash
+lister config set host 0.0.0.0        # or your Tailscale IP, e.g. 100.x.y.z
+lister serve --daemon                  # restart to apply (kill the old one first: lister status shows the pid)
+```
+
+Then browse to `http://<your-tailscale-ip>:7433`. There is no authentication, so bind only to networks you trust. `lister serve --host 0.0.0.0` does the same for one run.
+
 ## Keyboard (web)
 
 | Key | Action |

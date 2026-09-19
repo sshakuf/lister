@@ -9,7 +9,8 @@ import { useStore } from "../store";
 
 export interface RowHandlers {
   onKeyDown(rowIndex: number, e: React.KeyboardEvent<HTMLTextAreaElement>, draft: string, setDraft: (v: string) => void): void;
-  commit(rowIndex: number, draft: string): void;
+  /** Persist edited text. Keyed by file + id so a delayed commit can never hit the wrong (or a deleted) bullet. */
+  commit(filePath: string, id: string, draft: string): void;
   zoom(rowIndex: number): void;
   toggleExpand(rowIndex: number): void;
   convertToFolder(rowIndex: number): void;
@@ -54,20 +55,40 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
     if (ta.current) autosize(ta.current);
   }, [draft, editing]);
 
-  const scheduleCommit = (value: string) => {
+  const cancelPending = () => {
     if (commitTimer.current) clearTimeout(commitTimer.current);
+    commitTimer.current = null;
+  };
+
+  const scheduleCommit = (value: string) => {
+    cancelPending();
     commitTimer.current = window.setTimeout(() => {
+      commitTimer.current = null;
       dirty.current = false;
-      handlers.commit(rowIndex, value);
+      handlers.commit(row.filePath, b.id, value);
     }, 600);
   };
 
   const commitNow = (value: string) => {
-    if (commitTimer.current) clearTimeout(commitTimer.current);
-    commitTimer.current = null;
+    cancelPending();
     dirty.current = false;
-    handlers.commit(rowIndex, value);
+    handlers.commit(row.filePath, b.id, value);
   };
+
+  // unmount (deleted, collapsed away, zoomed out): flush a pending edit once, never after
+  const latest = useRef({ draft, filePath: row.filePath });
+  latest.current = { draft, filePath: row.filePath };
+  useEffect(() => {
+    return () => {
+      const pending = commitTimer.current !== null;
+      cancelPending();
+      if (pending && dirty.current) {
+        dirty.current = false;
+        handlers.commit(latest.current.filePath, b.id, latest.current.draft);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: b.id });
   const style: React.CSSProperties = {
@@ -121,10 +142,17 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
                 if (dirty.current) commitNow(draft);
                 if (useStore.getState().focus?.id === b.id) setFocus(null);
               }}
-              onKeyDown={(e) => handlers.onKeyDown(rowIndex, e, draft, (v) => {
-                dirty.current = true;
-                setDraft(v);
-              })}
+              onKeyDown={(e) => {
+                // deleting this bullet: drop any pending text commit so it cannot fire afterwards
+                if (e.key === "Backspace" && draft === "" && !e.metaKey && !e.ctrlKey) {
+                  cancelPending();
+                  dirty.current = false;
+                }
+                handlers.onKeyDown(rowIndex, e, draft, (v) => {
+                  dirty.current = true;
+                  setDraft(v);
+                });
+              }}
             />
           ) : (
             <div className="rendered">

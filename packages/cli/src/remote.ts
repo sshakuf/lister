@@ -1,4 +1,4 @@
-import { readServerInfo, listerDirFor } from "@lister/server";
+import { readServerInfo, listerDirFor, clientHost } from "@lister/server";
 import type { Backend, LocatedBullet } from "./backend.js";
 
 export class RemoteError extends Error {
@@ -80,7 +80,7 @@ export class RemoteBackend implements Backend {
 export async function findServer(home?: string, timeoutMs = 400): Promise<string | null> {
   const info = readServerInfo(listerDirFor(home));
   if (!info) return null;
-  const base = `http://127.0.0.1:${info.port}`;
+  const base = `http://${clientHost(info.host)}:${info.port}`;
   try {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), timeoutMs);

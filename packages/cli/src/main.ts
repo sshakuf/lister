@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { Command } from "commander";
 import { contractHome } from "@lister/core";
-import { readServerInfo, listerDirFor, loadConfig } from "@lister/server";
+import { readServerInfo, listerDirFor, loadConfig, saveConfig } from "@lister/server";
 import type { Backend } from "./backend.js";
 import { LocalBackend } from "./local.js";
 import { RemoteBackend, findServer } from "./remote.js";
@@ -110,16 +111,18 @@ program
   .command("serve")
   .description("run the lister server")
   .option("-p, --port <n>", "port", (v) => Number(v))
+  .option("-H, --host <addr>", "interface to bind: 127.0.0.1 (default), 0.0.0.0, or e.g. your Tailscale IP. Persist with `lister config set host <addr>`")
   .option("-d, --daemon", "run detached in the background")
   .action(async (opts) => {
     if (opts.daemon) {
-      const pid = await startDaemon(opts.port);
+      const pid = await startDaemon(opts.port, opts.host);
       out(`lister server started in background (pid ${pid})`);
       return;
     }
     const { startServer } = await import("@lister/server");
-    const srv = await startServer({ port: opts.port });
-    out(`lister server listening on http://127.0.0.1:${srv.port}`);
+    const srv = await startServer({ port: opts.port, host: opts.host });
+    out(`lister server listening on http://${srv.host}:${srv.port}`);
+    if (srv.host !== "127.0.0.1") out(`note: no authentication; only bind to networks you trust (a Tailscale IP or tailnet is fine)`);
     const stop = async () => {
       await srv.close();
       process.exit(0);
@@ -150,6 +153,33 @@ program
     spawn(opener, [base], { stdio: "ignore", detached: true }).unref();
   });
 
+const config = program.command("config").description("read or set ~/.lister/config.json values");
+config
+  .command("get [key]")
+  .description("show config (or one key: host, port, rootFile)")
+  .action((key?: string) => {
+    const cfg = loadConfig();
+    const view: Record<string, unknown> = { rootFile: contractHome(cfg.rootFile), port: cfg.port, host: cfg.host };
+    if (key) out(String(view[key] ?? ""));
+    else for (const [k, v] of Object.entries(view)) out(`${k}: ${v}`);
+  });
+config
+  .command("set <key> <value>")
+  .description("set host, port, or rootFile; restart the server to apply")
+  .action((key: string, value: string) => {
+    const cfg = loadConfig();
+    if (key === "host") cfg.host = value;
+    else if (key === "port") cfg.port = Number(value);
+    else if (key === "rootFile") cfg.rootFile = path.resolve(value.replace(/^~(?=$|\/)/, os.homedir()));
+    else {
+      console.error(`error: unknown key ${key} (host, port, rootFile)`);
+      process.exitCode = 1;
+      return;
+    }
+    saveConfig(cfg);
+    out(`${key} = ${key === "rootFile" ? contractHome(cfg.rootFile) : value}  (restart the server: lister serve --daemon)`);
+  });
+
 program
   .command("status")
   .description("show server status and config")
@@ -158,14 +188,15 @@ program
     const info = readServerInfo(listerDirFor());
     const base = await findServer();
     out(`root:   ${contractHome(cfg.rootFile)}`);
-    out(`server: ${base ? `running at ${base} (pid ${info?.pid})` : "not running"}`);
+    out(`host:   ${cfg.host}`);
+    out(`server: ${base ? `running at ${base} (pid ${info?.pid}, bound to ${info?.host ?? "127.0.0.1"})` : "not running"}`);
   });
 
-async function startDaemon(port?: number): Promise<number> {
+async function startDaemon(port?: number, host?: string): Promise<number> {
   const require = createRequire(import.meta.url);
   const serverMain = path.join(path.dirname(require.resolve("@lister/server")), "main.js");
   if (!fs.existsSync(serverMain)) throw new Error(`server entry not found at ${serverMain}; run pnpm build`);
-  const args = [serverMain, ...(port ? ["--port", String(port)] : [])];
+  const args = [serverMain, ...(port ? ["--port", String(port)] : []), ...(host ? ["--host", host] : [])];
   const logDir = listerDirFor();
   fs.mkdirSync(logDir, { recursive: true });
   const log = fs.openSync(path.join(logDir, "server.log"), "a");
