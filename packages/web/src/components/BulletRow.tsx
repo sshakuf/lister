@@ -3,8 +3,9 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Row } from "../tree";
 import { isFolderBullet } from "../types";
-import { formatDateShorthand, lastSegment, annotationCompletion, applyCompletion, hasStyle, toggleStyle, checkState, setChecked, addCheckbox, removeCheckbox } from "../format";
+import { formatDateShorthand, lastSegment, annotationCompletion, applyCompletion, setChecked } from "../format";
 import * as ops from "../ops";
+import { RowMenu } from "./RowMenu";
 import { BulletText } from "./BulletText";
 import { AnnotationMenu } from "./AnnotationMenu";
 import { useStore } from "../store";
@@ -40,8 +41,6 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
   const commitTimer = useRef<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const folder = isFolderBullet(b);
-  const struck = hasStyle(b.text, "strike");
-  const check = checkState(b.text);
   const setText = (text: string) => {
     if (text === b.text) return;
     setDraft(text);
@@ -260,19 +259,8 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
             ⋯
           </button>
           {menuOpen && (
-            <div className="menu" onMouseLeave={() => setMenuOpen(false)}>
-              <button onClick={() => { setMenuOpen(false); handlers.zoom(rowIndex); }}>Zoom in</button>
-              <button onClick={() => { setMenuOpen(false); setText(toggleStyle(b.text, "strike")); }}>{struck ? "Remove strike" : "Strike through"}</button>
-              {check === null && <button onClick={() => { setMenuOpen(false); setText(addCheckbox(b.text)); }}>Add checkbox</button>}
-              {check === "checkbox" && <button onClick={() => { setMenuOpen(false); setText(setChecked(b.text, true)); }}>Check ☑</button>}
-              {check === "checked" && <button onClick={() => { setMenuOpen(false); setText(setChecked(b.text, false)); }}>Uncheck ☐</button>}
-              {check !== null && <button onClick={() => { setMenuOpen(false); setText(removeCheckbox(b.text)); }}>Remove checkbox</button>}
-              <button onClick={() => { setMenuOpen(false); handlers.toggleDone(rowIndex); }}>{b.done !== undefined ? "Mark not done" : "Mark done ✓"}</button>
-              {!folder && <button onClick={() => { setMenuOpen(false); handlers.convertToFolder(rowIndex); }}>Convert to Folder Bullet…</button>}
-              {folder && <button onClick={() => { setMenuOpen(false); handlers.inlineFolder(rowIndex); }}>Inline file back</button>}
-              <button className="danger" onClick={() => { setMenuOpen(false); handlers.remove(rowIndex); }}>
-                {folder ? "Detach (keeps file)" : "Delete"}
-              </button>
+            <div onMouseLeave={() => setMenuOpen(false)}>
+              <RowMenu row={row} rowIndex={rowIndex} handlers={handlers} close={() => setMenuOpen(false)} />
             </div>
           )}
         </div>

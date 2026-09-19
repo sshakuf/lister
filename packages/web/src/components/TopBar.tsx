@@ -27,10 +27,10 @@ export function TopBar() {
         <button className="ghost" onClick={() => setSearchOpen(true)} title="Search (⌘K)">
           Search <kbd>⌘K</kbd>
         </button>
-        <button className="ghost" disabled={!undoN} onClick={() => useStore.getState().undo()} title="Undo (⌘Z)">
+        <button className="ghost desktop-only" disabled={!undoN} onClick={() => useStore.getState().undo()} title="Undo (⌘Z)">
           ↶
         </button>
-        <button className="ghost" disabled={!redoN} onClick={() => useStore.getState().redo()} title="Redo (⇧⌘Z)">
+        <button className="ghost desktop-only" disabled={!redoN} onClick={() => useStore.getState().redo()} title="Redo (⇧⌘Z)">
           ↷
         </button>
         <span className={`ws ${wsOpen ? "on" : "off"}`} title={wsOpen ? "Live updates connected" : "Live updates disconnected"} />

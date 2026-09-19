@@ -130,10 +130,28 @@ main { flex: 1; }
 .row-line:hover .row-actions, .row.editing .row-actions { opacity: 1; }
 .more, .indent-btn { border: none; color: var(--faint); padding: 0 8px; height: 26px; min-width: 26px; }
 .indent-btn:disabled { opacity: .3; cursor: default; background: none; }
-/* touch devices: no hover, so keep the controls visible and finger-sized */
+/* edit toolbar (touch): pinned just above the on-screen keyboard */
+.edit-toolbar { display: none; position: fixed; left: 0; right: 0; z-index: 30; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--bg); border-top: 1px solid var(--line); }
+.edit-toolbar-row { display: flex; gap: 4px; justify-content: space-between; max-width: 900px; margin: 0 auto; }
+.edit-toolbar-row button { flex: 1 1 0; height: 40px; font-size: 18px; border: 1px solid var(--line); border-radius: 8px; padding: 0; }
+.edit-toolbar-row button:disabled { opacity: .3; background: none; }
+.menu.sheet { position: static; margin: 0 auto 8px; max-width: 900px; width: 100%; box-shadow: none; }
+.menu.sheet button { padding: 11px 12px; font-size: 16px; }
+
+/* touch devices: Workflowy-style rows. Chevron + big round dot on the left, no per-row buttons, toolbar instead */
 @media (hover: none), (pointer: coarse) {
-  .row-actions { opacity: 1; }
-  .more, .indent-btn { height: 36px; min-width: 36px; font-size: 16px; }
+  .row-actions { display: none; }
+  .edit-toolbar { display: block; }
+  .topbar { padding: 8px 12px; gap: 8px; }
+  .topbar kbd, .desktop-only { display: none; }
+  .row-line { min-height: 44px; padding: 4px 0; align-items: center; }
+  .toggle { opacity: 1; width: 22px; height: 40px; font-size: 14px; }
+  .dot { width: 34px; height: 34px; margin: 0 4px 0 2px; background: var(--pill); font-size: 10px; border-radius: 50%; }
+  .dot.has-collapsed { background: var(--line); }
+  .row.folder .dot { background: var(--accent-bg); }
+  .content { padding: 4px 6px; font-size: 1.08em; }
+  .outline { padding: 12px 10px 200px; }
+  .cb { font-size: 1.2em; padding-right: 6px; }
 }
 .menu { position: absolute; right: 0; top: 26px; background: var(--modal); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); display: flex; flex-direction: column; min-width: 220px; z-index: 10; padding: 4px; }
 .menu button { border: none; text-align: left; padding: 6px 10px; border-radius: 6px; }

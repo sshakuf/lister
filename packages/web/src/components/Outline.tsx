@@ -10,6 +10,7 @@ import * as ops from "../ops";
 import { zoomIntoRow } from "../navigate";
 import { BulletRow, type RowHandlers } from "./BulletRow";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { EditToolbar } from "./EditToolbar";
 
 const isMac = navigator.platform.toLowerCase().includes("mac");
 
@@ -304,6 +305,7 @@ export function Outline() {
           + Add bullet
         </button>
       )}
+      <EditToolbar rows={rows} handlers={handlers} />
     </div>
   );
 }

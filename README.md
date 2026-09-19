@@ -68,7 +68,7 @@ There is no authentication either way, so keep it to your tailnet.
 | Cmd+K | search everywhere |
 | Cmd+Z / Shift+Cmd+Z | undo / redo |
 | click the dot | zoom in |
-| ← → buttons at the row end | outdent / indent without a keyboard (always visible on touch screens) |
+| touch devices | Workflowy-style rows: chevron + round dot on the left; while editing, a toolbar sits above the keyboard with outdent, indent, undo, redo, done, `@`, `[`, more actions, hide keyboard. On desktop the ← → ⋯ buttons appear at the row end on hover. |
 | `@15/9/27␣`, `!1␣` | set date / priority while typing |
 | `[` | autocomplete annotation kinds; filters as you type, Enter/Tab inserts `kind:` |
 | ⋯ menu | strike through / remove strike, add checkbox / check / uncheck / remove, mark done, zoom, convert, delete |
