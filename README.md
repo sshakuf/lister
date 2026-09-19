@@ -40,14 +40,21 @@ lister import workflowy.opml   # bring your Workflowy export in
 
 ## Reaching it from other devices (Tailscale)
 
-The server binds `127.0.0.1` by default. To open the web app from your phone or another machine on your tailnet:
+Recommended: let Tailscale proxy to the local server with a real HTTPS certificate. The server stays bound to `127.0.0.1`.
 
 ```bash
-lister config set host 0.0.0.0        # or your Tailscale IP, e.g. 100.x.y.z
-lister serve --daemon                  # restart to apply (kill the old one first: lister status shows the pid)
+tailscale serve --bg http://127.0.0.1:7433
+# → https://<machine>.<tailnet>.ts.net/   (tailnet only; `tailscale serve reset` to undo)
 ```
 
-Then browse to `http://<your-tailscale-ip>:7433`. There is no authentication, so bind only to networks you trust. `lister serve --host 0.0.0.0` does the same for one run.
+Phones default to HTTPS, so a plain `http://100.x.y.z:7433` address typed into a mobile browser fails with `ERR_SSL_PROTOCOL_ERROR` unless you type the `http://` explicitly. If you do want the raw port instead of `tailscale serve`:
+
+```bash
+lister config set host 0.0.0.0        # or your Tailscale IP
+lister serve --daemon                  # restart to apply; `lister status` shows the old pid
+```
+
+There is no authentication either way, so keep it to your tailnet.
 
 ## Keyboard (web)
 
