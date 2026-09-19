@@ -1,0 +1,12 @@
+{
+  "name": "lister",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "dev": "pnpm --filter @lister/server dev"
+  },
+  "engines": { "node": ">=22" },
+  "packageManager": "pnpm@10.30.1"
+}
