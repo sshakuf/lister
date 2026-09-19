@@ -1,0 +1,21 @@
+{
+  "name": "@lister/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "lister": "./dist/main.js" },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp ../../skill/LISTER-SKILL.md dist/LISTER-SKILL.md",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@lister/core": "workspace:*",
+    "@lister/server": "workspace:*",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

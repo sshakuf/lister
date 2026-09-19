@@ -322,8 +322,9 @@ export class Store {
     const dir = path.dirname(filePath);
     let targetFile: OutlineFile;
     let parentBulletId: BulletId | null;
-    if (parentId === null) {
-      targetFile = await this.root();
+    const rootFile = await this.root();
+    if (parentId === null || parentId === rootFile.id) {
+      targetFile = rootFile;
       parentBulletId = null;
     } else {
       const ploc = await this.locate(parentId);
@@ -444,6 +445,16 @@ export class Store {
   private async writeNow(filePath: string): Promise<void> {
     const e = this.entries.get(filePath);
     if (!e) return;
+    // Someone (an agent) may have written the file since we last read or wrote it.
+    // Merge their version in before overwriting, so no external edit is lost.
+    if (fs.existsSync(filePath)) {
+      try {
+        const onDisk = await fsp.readFile(filePath, "utf8");
+        if (onDisk !== e.lastWritten) this.mergeFromDisk(e, filePath, onDisk);
+      } catch {
+        /* unreadable: proceed with our version */
+      }
+    }
     const text = serializeOutline(e.file);
     if (text === e.lastWritten && fs.existsSync(filePath)) return;
     e.lastWritten = text;
@@ -479,14 +490,17 @@ export class Store {
       return;
     }
     if (onDisk === e.lastWritten) return;
+    this.mergeFromDisk(e, filePath, onDisk);
+    if (serializeOutline(e.file) !== onDisk) this.scheduleWrite(filePath);
+    this.onChange(filePath);
+  }
+
+  /** Three-way merge the on-disk text into the entry; `lastWritten` becomes the disk text. */
+  private mergeFromDisk(e: Entry, filePath: string, onDisk: string): void {
     const base = parseOutline(e.lastWritten, filePath).file;
     const theirs = parseOutline(onDisk, filePath, { knownIds: this.knownIdsExcept(filePath) }).file;
-    const merged = mergeOutlines(base, e.file, theirs);
-    e.file = merged;
+    e.file = mergeOutlines(base, e.file, theirs);
     e.lastWritten = onDisk;
-    const canonical = serializeOutline(merged);
-    if (canonical !== onDisk) this.scheduleWrite(filePath);
-    this.onChange(filePath);
   }
 
   private knownIdsExcept(filePath: string): Set<string> {

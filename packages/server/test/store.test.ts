@@ -153,3 +153,17 @@ test("adoptFile registers an orphan", async (t) => {
   assert.match(child, new RegExp(`^# Ideas \\[id:${fb.id}\\] \\[parent:${root.id}\\]`));
   await store.close();
 });
+
+test("raw append during the debounce window survives the server write", async (t) => {
+  const { home } = tmpHome();
+  const store = new Store(loadConfig(home), { watch: false, debounceMs: 200 });
+  t.after(() => store.close());
+  const root = await store.root();
+  await store.flush();
+  const b = await store.addBullet(root.path, null, 0, "from app"); // write pending for 200ms
+  fs.appendFileSync(root.path, "- from agent\n"); // agent writes meanwhile
+  await sleep(300); // debounce fires: must merge, not clobber
+  const txt = fs.readFileSync(root.path, "utf8");
+  assert.match(txt, new RegExp(`- from app \\[id:${b.id}\\]`));
+  assert.match(txt, /- from agent \[id:[0-9a-z]{8}\]/);
+});
