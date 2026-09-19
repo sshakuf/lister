@@ -31,9 +31,10 @@ export function buildApp(deps: AppDeps): FastifyInstance & { broadcast(msg: obje
     for (const s of sockets) if (s.readyState === 1) s.send(data);
   };
 
-  app.setErrorHandler((err, _req, reply) => {
+  app.setErrorHandler((error: unknown, _req, reply) => {
+    const err = error as Error & { status?: number; validation?: unknown };
     if (err instanceof HttpError) return reply.status(err.status).send({ error: err.message });
-    if ((err as any).validation) return reply.status(400).send({ error: err.message });
+    if (err.validation) return reply.status(400).send({ error: err.message });
     if (err.name === "CycleError") return reply.status(400).send({ error: err.message });
     app.log.error(err);
     return reply.status(500).send({ error: err.message ?? "internal error" });
