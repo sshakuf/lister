@@ -33,7 +33,7 @@ export async function addBullet(filePath: string, parentId: string | null, index
   localUpdate(filePath, (bs) => insertBullet(bs, parentId, index, temp));
   try {
     const b = await api.addBullet(filePath, parentId, index, text);
-    localUpdate(filePath, (bs) => updateBullet(removeBullet(bs, tempId).bullets.length === bs.length ? bs : insertBullet(removeBullet(bs, tempId).bullets, parentId, index, b), b.id, {}));
+    localUpdate(filePath, (bs) => insertBullet(removeBullet(bs, tempId).bullets, parentId, index, b));
     if (opts.focus !== false) S().setFocus({ id: b.id, caret: 0 });
     if (opts.undo !== false) {
       S().pushUndo({

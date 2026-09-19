@@ -85,7 +85,10 @@ export function mergeOutlines(base: OutlineFile, mine: OutlineFile, theirs: Outl
     else result = insertBullet(result, null, Number.MAX_SAFE_INTEGER, copy);
   }
 
-  return { ...theirs, bullets: result };
+  // header: field-by-field three-way; theirs wins only where theirs actually changed it
+  const pick = <K extends "name" | "id" | "parentId">(k: K): OutlineFile[K] =>
+    theirs[k] !== base[k] ? theirs[k] : mine[k];
+  return { ...theirs, name: pick("name"), id: pick("id"), parentId: pick("parentId"), bullets: result };
 }
 
 function depthOf(m: Map<BulletId, Flat>, id: BulletId): number {

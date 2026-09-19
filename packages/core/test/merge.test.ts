@@ -53,3 +53,16 @@ test("new in mine with parent gone lands at root end", () => {
   const f = mergeOutlines(P(BASE), mine, theirs);
   assert.equal(f.bullets[f.bullets.length - 1].id, "c0000009");
 });
+
+test("header fields set in mine survive when theirs left them untouched", () => {
+  const base = P("# T [id:aaaaaaaa]\n- one [id:c0000001]\n");
+  const mine = { ...P("# Renamed [id:aaaaaaaa]\n- one [id:c0000001]\n"), parentId: "bbbbbbbb" };
+  const theirs = P("# T [id:aaaaaaaa]\n- one [id:c0000001]\n- two [id:c0000002]\n");
+  const f = mergeOutlines(base, mine, theirs);
+  assert.equal(f.parentId, "bbbbbbbb");
+  assert.equal(f.name, "Renamed");
+  assert.equal(f.bullets.length, 2);
+  // but when theirs changes the header, theirs wins
+  const theirs2 = P("# Theirs [id:aaaaaaaa]\n- one [id:c0000001]\n");
+  assert.equal(mergeOutlines(base, mine, theirs2).name, "Theirs");
+});
