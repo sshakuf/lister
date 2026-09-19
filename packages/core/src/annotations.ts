@@ -139,3 +139,12 @@ export function joinMetadata(text: string, meta: Metadata): string {
   }
   return parts.join(" ");
 }
+
+/** Human-readable text with annotations reduced to their values: `Proj [bold:one] [id:x]` -> `Proj one`. */
+export function plainText(line: string): string {
+  return collapseSpaces(
+    parseSegments(line)
+      .map((s) => (s.kind === "text" ? s.text : s.value ?? ""))
+      .join(""),
+  );
+}

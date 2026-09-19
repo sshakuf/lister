@@ -87,9 +87,18 @@ export function slugify(text: string): string {
 }
 
 /** Server returns `folder` already expanded to an absolute path. */
+/** Text with annotations reduced to their values; must match core's plainText(). */
+export function plainText(line: string): string {
+  return parseSegments(line)
+    .map((s) => (s.kind === "text" ? s.text : s.value ?? ""))
+    .join("")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 export function folderFilePath(b: Bullet): string {
   const dir = (b.folder ?? "").replace(/\/+$/, "");
-  return `${dir}/${slugify(b.text)}${OUTLINE_EXT}`;
+  return `${dir}/${slugify(plainText(b.text))}${OUTLINE_EXT}`;
 }
 
 export function lastSegment(p: string): string {

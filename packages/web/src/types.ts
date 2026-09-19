@@ -60,12 +60,14 @@ export interface LocatedBullet {
   index: number;
 }
 
-export type BulletPatch = Partial<Pick<Bullet, "text" | "note" | "date" | "priority" | "done">> & {
+/** null clears a field. */
+export interface BulletPatch {
+  text?: string;
+  note?: string | null;
   date?: string | null;
   priority?: 1 | 2 | 3 | null;
   done?: string | null;
-  note?: string | null;
-};
+}
 
 export function isFolderBullet(b: Bullet): boolean {
   return typeof b.folder === "string" && b.folder.length > 0;

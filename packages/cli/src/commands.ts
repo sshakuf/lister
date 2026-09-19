@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
-import { renderPlain, OUTLINE_EXT, parseOutline, serializeOutline, newId, slugify, contractHome, isFolderBullet, type OutlineFile, type Bullet } from "@lister/core";
+import { renderPlain, OUTLINE_EXT, parseOutline, serializeOutline, newId, slugify, folderFilePath, contractHome, isFolderBullet, type OutlineFile, type Bullet } from "@lister/core";
 import type { Backend } from "./backend.js";
 
 export interface Ctx {
@@ -80,7 +80,7 @@ export async function resolveFile(ctx: Ctx, opts: { file?: string; under?: strin
   if (opts.under) {
     const loc = await ctx.backend.locate(opts.under);
     if (isFolderBullet(loc.bullet)) {
-      const fp = path.join(loc.bullet.folder!, slugify(loc.bullet.text) + OUTLINE_EXT);
+      const fp = folderFilePath(loc.bullet.folder!, loc.bullet.text);
       return { filePath: fp, parentId: null };
     }
     return { filePath: loc.filePath, parentId: loc.bullet.id };
@@ -129,7 +129,7 @@ export async function cmdShow(ctx: Ctx, id: string): Promise<void> {
 /** Create a new Outline File in cwd and register its Folder Bullet. */
 export async function cmdNew(ctx: Ctx, name: string, opts: { dir?: string; under?: string }): Promise<Bullet> {
   const dir = path.resolve(ctx.cwd, opts.dir ?? ".");
-  const filePath = path.join(dir, slugify(name) + OUTLINE_EXT);
+  const filePath = folderFilePath(dir, name);
   if (fs.existsSync(filePath)) throw new CliError(`${contractHome(filePath)} already exists; adopt it with: lister admin adopt ${path.basename(filePath)}`);
   const file: OutlineFile = { path: filePath, name, id: newId(), bullets: [] };
   await fsp.writeFile(filePath, serializeOutline(file));

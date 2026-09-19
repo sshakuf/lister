@@ -35,6 +35,7 @@ test("folderFilePath expands ~ and appends slug", () => {
   const p = folderFilePath("~/proj", "Bugs");
   assert.ok(p.startsWith(os.homedir()));
   assert.ok(p.endsWith("/proj/bugs.lister"));
+  assert.ok(folderFilePath("~/proj", "Proj [bold:one] [red:two]").endsWith("/proj/proj-one-two.lister"));
 });
 
 test("expandHome / contractHome round trip", () => {

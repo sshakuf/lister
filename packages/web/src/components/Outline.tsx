@@ -118,9 +118,10 @@ export function Outline() {
           if (iso || prio) {
             e.preventDefault();
             const start = caret - token.length;
-            const newText = (draft.slice(0, start) + draft.slice(caret)).replace(/\s{2,}/g, " ").replace(/\s+$/, "");
+            // keep the space that preceded the token so the next word does not glue on
+            const newText = (draft.slice(0, start) + draft.slice(caret)).replace(/\s{2,}/g, " ");
             setDraft(newText);
-            ops.patchBullet(r.filePath, b.id, iso ? { text: newText, date: iso } : { text: newText, priority: prio! });
+            ops.patchBullet(r.filePath, b.id, iso ? { text: newText.trim(), date: iso } : { text: newText.trim(), priority: prio! });
             setFocus({ id: b.id, caret: Math.min(start, newText.length) });
             return;
           }
@@ -220,10 +221,8 @@ export function Outline() {
       // if `over` is a descendant of `active`, ignore
       if (findBullet(a.bullet.children, o.bullet.id)) return;
       const from: ops.Position = { filePath: a.filePath, parentId: a.parentId, index: a.index };
-      let index = o.index;
-      if (a.parentId === o.parentId && a.index < o.index) index = o.index; // after removal shift handled by server: insert at o.index places after
-      else if (a.parentId === o.parentId) index = o.index;
-      ops.moveTo(a.bullet.id, from, { filePath: o.filePath, parentId: o.parentId, index });
+      // server removes then inserts: inserting at o.index lands after `over` when moving down, before it when moving up
+      ops.moveTo(a.bullet.id, from, { filePath: o.filePath, parentId: o.parentId, index: o.index });
     },
     [rows],
   );

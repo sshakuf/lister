@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import { plainText } from "./annotations.js";
 
 export const OUTLINE_EXT = ".lister";
 const MAX_SLUG = 60;
@@ -29,9 +30,9 @@ export function contractHome(p: string): string {
   return p;
 }
 
-/** Absolute path of the Outline File for a Folder Bullet with `text` pointing at `folder`. */
+/** Absolute path of the Outline File for a Folder Bullet with `text` pointing at `folder`. Inline annotations do not affect the slug. */
 export function folderFilePath(folder: string, text: string): string {
-  return path.join(expandHome(folder), slugify(text) + OUTLINE_EXT);
+  return path.join(expandHome(folder), slugify(plainText(text)) + OUTLINE_EXT);
 }
 
 export function isOutlineFile(p: string): boolean {
