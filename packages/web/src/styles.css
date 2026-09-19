@@ -184,3 +184,14 @@ main { flex: 1; }
 .relink { display: flex; gap: 8px; align-items: flex-end; margin-top: 12px; }
 .relink label { display: flex; flex-direction: column; gap: 4px; flex: 1; }
 .import-row { display: flex; gap: 12px; align-items: center; }
+
+/* annotation autocomplete */
+.content { position: relative; }
+.ac-menu { position: absolute; left: 0; top: 100%; z-index: 20; min-width: 300px; max-width: 460px; background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 4px; margin-top: 4px; font-size: 13px; }
+.ac-item { display: flex; justify-content: space-between; gap: 14px; padding: 5px 8px; border-radius: 5px; cursor: pointer; }
+.ac-item.selected { background: var(--accent-bg); }
+.ac-kind { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.ac-kind b { color: var(--accent); }
+.ac-hint { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ac-foot { color: var(--muted); font-size: 11px; padding: 5px 8px 3px; border-top: 1px solid var(--line); margin-top: 3px; }
+.kind-red { color: #dc2626; } .kind-green { color: #16a34a; } .kind-blue { color: #2563eb; } .kind-yellow { color: #ca8a04; } .kind-purple { color: #9333ea; } .kind-grey { color: #6b7280; }

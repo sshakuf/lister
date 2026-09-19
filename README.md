@@ -69,6 +69,7 @@ There is no authentication either way, so keep it to your tailnet.
 | Cmd+Z / Shift+Cmd+Z | undo / redo |
 | click the dot | zoom in |
 | `@15/9/27␣`, `!1␣` | set date / priority while typing |
+| `[` | autocomplete annotation kinds; filters as you type, Enter/Tab inserts `kind:` |
 
 ## Layout
 

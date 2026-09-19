@@ -147,3 +147,67 @@ export function parsePriorityShorthand(input: string): 1 | 2 | 3 | null {
 }
 
 export const URL_RE = /https?:\/\/[^\s<>()\[\]]+/g;
+
+// ---------- annotation autocomplete ----------
+
+export interface AnnotationKindInfo {
+  kind: string;
+  hint: string;
+  /** what to insert after the kind */
+  suffix: string;
+}
+
+/** Kinds offered when the user types `[`. `id`, `folder`, `parent` are managed by Lister and not offered. */
+export const COMPLETABLE_KINDS: AnnotationKindInfo[] = [
+  { kind: "bold", hint: "[bold:text]", suffix: ":" },
+  { kind: "italic", hint: "[italic:text]", suffix: ":" },
+  { kind: "highlight", hint: "[highlight:text]", suffix: ":" },
+  { kind: "code", hint: "[code:text]", suffix: ":" },
+  { kind: "red", hint: "colour", suffix: ":" },
+  { kind: "green", hint: "colour", suffix: ":" },
+  { kind: "blue", hint: "colour", suffix: ":" },
+  { kind: "yellow", hint: "colour", suffix: ":" },
+  { kind: "purple", hint: "colour", suffix: ":" },
+  { kind: "grey", hint: "colour", suffix: ":" },
+  { kind: "date", hint: "[date:2027-09-15]  or type @15/9/27", suffix: ":" },
+  { kind: "priority", hint: "[priority:1]  1 high … 3 low, or type !1", suffix: ":" },
+  { kind: "done", hint: "[done:2026-09-19]", suffix: ":" },
+  { kind: "link", hint: "[link:<bullet id>]", suffix: ":" },
+];
+
+export interface Completion {
+  /** index of the opening `[` in the text */
+  start: number;
+  /** full text between `[` and the caret, e.g. `bold,re` */
+  typed: string;
+  /** the segment being completed (after the last comma) */
+  query: string;
+  matches: AnnotationKindInfo[];
+}
+
+/**
+ * If the caret sits inside an unfinished annotation head (`[bo|`, `[bold,re|`), return the completion state.
+ * Closed by `:` / `]` / whitespace, an escaped `\[`, or moving the caret out of the head.
+ */
+export function annotationCompletion(text: string, caret: number): Completion | null {
+  const before = text.slice(0, caret);
+  const start = before.lastIndexOf("[");
+  if (start < 0) return null;
+  if (start > 0 && before[start - 1] === "\\") return null;
+  const typed = before.slice(start + 1);
+  if (!/^[a-z,]*$/i.test(typed)) return null;
+  const parts = typed.toLowerCase().split(",");
+  const query = parts[parts.length - 1];
+  const already = new Set(parts.slice(0, -1));
+  const matches = COMPLETABLE_KINDS.filter((k) => k.kind.startsWith(query) && !already.has(k.kind));
+  if (!matches.length) return null;
+  return { start, typed, query, matches };
+}
+
+/** Apply a chosen kind: replaces the partial head and returns the new text and caret. */
+export function applyCompletion(text: string, caret: number, c: Completion, pick: AnnotationKindInfo): { text: string; caret: number } {
+  const headStart = caret - c.query.length;
+  const insert = pick.kind + pick.suffix;
+  const next = text.slice(0, headStart) + insert + text.slice(caret);
+  return { text: next, caret: headStart + insert.length };
+}

@@ -3,8 +3,9 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Row } from "../tree";
 import { isFolderBullet } from "../types";
-import { formatDateShorthand, lastSegment } from "../format";
+import { formatDateShorthand, lastSegment, annotationCompletion, applyCompletion } from "../format";
 import { BulletText } from "./BulletText";
+import { AnnotationMenu } from "./AnnotationMenu";
 import { useStore } from "../store";
 
 export interface RowHandlers {
@@ -35,6 +36,26 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
   const commitTimer = useRef<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const folder = isFolderBullet(b);
+
+  // `[` autocomplete: derived from the draft and caret; dismissed with Esc until the head changes
+  const [caretPos, setCaretPos] = useState(0);
+  const [acDismissed, setAcDismissed] = useState<string | null>(null);
+  const [acSel, setAcSel] = useState(0);
+  const completion = editing ? annotationCompletion(draft, caretPos) : null;
+  const acKey = completion ? `${completion.start}:${completion.typed}` : null;
+  const acOpen = completion !== null && acDismissed !== acKey;
+  const acSelected = Math.min(acSel, (completion?.matches.length ?? 1) - 1);
+
+  const pickCompletion = (i: number) => {
+    if (!completion) return;
+    const { text, caret } = applyCompletion(draft, caretPos, completion, completion.matches[i]);
+    dirty.current = true;
+    setDraft(text);
+    setCaretPos(caret);
+    setAcSel(0);
+    scheduleCommit(text);
+    requestAnimationFrame(() => ta.current?.setSelectionRange(caret, caret));
+  };
 
   // adopt server text unless the user has unsaved edits
   useEffect(() => {
@@ -136,13 +157,35 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
               onChange={(e) => {
                 dirty.current = true;
                 setDraft(e.target.value);
+                setCaretPos(e.target.selectionStart ?? e.target.value.length);
+                setAcSel(0);
                 scheduleCommit(e.target.value);
               }}
+              onSelect={(e) => setCaretPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
+              onClick={(e) => setCaretPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
               onBlur={() => {
                 if (dirty.current) commitNow(draft);
                 if (useStore.getState().focus?.id === b.id) setFocus(null);
               }}
               onKeyDown={(e) => {
+                if (acOpen && completion) {
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const n = completion.matches.length;
+                    setAcSel((acSelected + (e.key === "ArrowDown" ? 1 : n - 1)) % n);
+                    return;
+                  }
+                  if (e.key === "Enter" || e.key === "Tab") {
+                    e.preventDefault();
+                    pickCompletion(acSelected);
+                    return;
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setAcDismissed(acKey);
+                    return;
+                  }
+                }
                 // deleting this bullet: drop any pending text commit so it cannot fire afterwards
                 if (e.key === "Backspace" && draft === "" && !e.metaKey && !e.ctrlKey) {
                   cancelPending();
@@ -158,6 +201,9 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
             <div className="rendered">
               <BulletText text={draft} />
             </div>
+          )}
+          {acOpen && completion && (
+            <AnnotationMenu completion={completion} selected={acSelected} onHover={setAcSel} onPick={pickCompletion} />
           )}
           {folder && (
             <span className="folder-hint" title={b.folder}>
