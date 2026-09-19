@@ -59,8 +59,14 @@ function AutoLinked({ text }: { text: string }) {
   );
 }
 
+interface Props {
+  text: string;
+  /** called with the new checked state when a rendered checkbox is tapped */
+  onToggleCheck?: (checked: boolean) => void;
+}
+
 /** Render bullet text with annotations applied (read mode). */
-export function BulletText({ text }: { text: string }) {
+export function BulletText({ text, onToggleCheck }: Props) {
   const segs = parseSegments(text);
   if (!text.trim()) return <span className="placeholder">Empty bullet</span>;
   return (
@@ -69,8 +75,29 @@ export function BulletText({ text }: { text: string }) {
         if (s.kind === "text") return <AutoLinked key={i} text={s.text} />;
         if (s.kinds.length === 1 && s.kinds[0] === "link" && s.value) return <LinkChip key={i} id={s.value} />;
         if (isStyleAnnotation(s.kinds)) {
+          const checked = s.kinds.includes("checked");
+          const box = checked || s.kinds.includes("checkbox");
           return (
             <span key={i} className={s.kinds.map((k) => `st-${k}`).join(" ")}>
+              {box && (
+                <button
+                  type="button"
+                  className={`cb ${checked ? "on" : ""}`}
+                  aria-checked={checked}
+                  role="checkbox"
+                  title={checked ? "Uncheck" : "Check"}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleCheck?.(!checked);
+                  }}
+                >
+                  {checked ? "☑" : "☐"}
+                </button>
+              )}
               {s.value ?? ""}
             </span>
           );

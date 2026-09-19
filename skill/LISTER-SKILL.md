@@ -36,7 +36,8 @@ Inline `[kind:value]` markers. No nesting. A literal `[` is written `\[`.
 | `[priority:1]` | 1 (highest) to 3. |
 | `[done:2026-09-19]` | Completed on that date. `[done]` alone is accepted. |
 | `[link:abc12345]` | Reference to another bullet by id. |
-| `[bold:text]`, `[italic:text]`, `[highlight:text]`, `[code:text]` | Inline style. Combine with commas: `[bold,red:text]`. |
+| `[bold:text]`, `[italic:text]`, `[highlight:text]`, `[code:text]`, `[strike:text]` | Inline style. Combine with commas: `[bold,red:text]`. |
+| `[checkbox:text]` / `[checked:text]` | An inline checkbox with its label, unchecked / checked. Toggle by swapping the kind. |
 | `[red:..]` `[green:..]` `[blue:..]` `[yellow:..]` `[purple:..]` `[grey:..]` | Colour. |
 
 Bare `http(s)://` URLs are fine in text.

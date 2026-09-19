@@ -71,6 +71,9 @@ There is no authentication either way, so keep it to your tailnet.
 | ← → buttons at the row end | outdent / indent without a keyboard (always visible on touch screens) |
 | `@15/9/27␣`, `!1␣` | set date / priority while typing |
 | `[` | autocomplete annotation kinds; filters as you type, Enter/Tab inserts `kind:` |
+| ⋯ menu | strike through / remove strike, add checkbox / check / uncheck / remove, mark done, zoom, convert, delete |
+
+Inline checkboxes: `[checkbox:label]` renders ☐ label, `[checked:label]` renders ☑ label. Tap the box to toggle. `[strike:text]` strikes text without marking the bullet done.
 
 Text size: Admin → Display has − / + buttons; the choice is saved per device.
 

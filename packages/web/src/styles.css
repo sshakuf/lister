@@ -145,6 +145,10 @@ main { flex: 1; }
 .st-italic { font-style: italic; }
 .st-highlight { background: var(--hl); border-radius: 3px; padding: 0 2px; }
 .st-code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; background: var(--code-bg); border-radius: 4px; padding: 0 4px; }
+.st-strike { text-decoration: line-through; color: var(--muted); }
+.st-checked { text-decoration: line-through; color: var(--muted); }
+.cb { border: none; background: none; padding: 0 4px 0 0; font-size: 1.05em; line-height: 1; color: var(--accent); cursor: pointer; vertical-align: -1px; }
+.cb:hover { background: none; filter: brightness(1.15); }
 .st-red { color: var(--c-red); }
 .st-green { color: var(--c-green); }
 .st-blue { color: var(--c-blue); }

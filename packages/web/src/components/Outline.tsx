@@ -150,6 +150,10 @@ export function Outline() {
       ops.moveTo(b.id, from, { filePath: r.filePath, parentId: ploc.parent?.id ?? null, index: ploc.index + 1 });
       setFocus({ id: b.id, caret: c });
     },
+    toggleDone(i) {
+      const r = rows[i];
+      if (r) ops.toggleDone(r.filePath, r.bullet, todayIso());
+    },
     remove(i) {
       const r = rows[i];
       if (!r) return;

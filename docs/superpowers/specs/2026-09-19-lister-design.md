@@ -46,7 +46,8 @@ Syntax `[kind:value]` or `[kind]` (flag). No nesting. Combined styles: `[bold,re
 | `priority` | `1`, `2`, `3` | UI shorthand `!1` |
 | `done` | `YYYY-MM-DD` | flag form `[done]` also accepted on read; written with date |
 | `link` | bullet id | rendered as target Bullet text; click navigates |
-| style | `bold`, `italic`, `highlight`, `code`, `red`, `green`, `blue`, `yellow`, `purple`, `grey` | value is the styled text; combinable with commas |
+| style | `bold`, `italic`, `highlight`, `code`, `strike`, `red`, `green`, `blue`, `yellow`, `purple`, `grey` | value is the styled text; combinable with commas |
+| `checkbox` / `checked` | label text | inline checkbox, unchecked / checked; the UI toggles by swapping the kind |
 
 Metadata kinds (`id`, `folder`, `date`, `priority`, `done`) are removed from their position on parse and re-emitted at line end on serialise, in that order. Inline kinds (`link`, styles) keep their position.
 

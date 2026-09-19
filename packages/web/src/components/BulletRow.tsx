@@ -3,7 +3,8 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Row } from "../tree";
 import { isFolderBullet } from "../types";
-import { formatDateShorthand, lastSegment, annotationCompletion, applyCompletion } from "../format";
+import { formatDateShorthand, lastSegment, annotationCompletion, applyCompletion, hasStyle, toggleStyle, checkState, setChecked, addCheckbox, removeCheckbox } from "../format";
+import * as ops from "../ops";
 import { BulletText } from "./BulletText";
 import { AnnotationMenu } from "./AnnotationMenu";
 import { useStore } from "../store";
@@ -19,6 +20,7 @@ export interface RowHandlers {
   remove(rowIndex: number): void;
   indent(rowIndex: number, caret?: number): void;
   outdent(rowIndex: number, caret?: number): void;
+  toggleDone(rowIndex: number): void;
 }
 
 interface Props {
@@ -38,6 +40,13 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
   const commitTimer = useRef<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const folder = isFolderBullet(b);
+  const struck = hasStyle(b.text, "strike");
+  const check = checkState(b.text);
+  const setText = (text: string) => {
+    if (text === b.text) return;
+    setDraft(text);
+    ops.patchBullet(row.filePath, b.id, { text });
+  };
 
   // `[` autocomplete: derived from the draft and caret; dismissed with Esc until the head changes
   const [caretPos, setCaretPos] = useState(0);
@@ -201,7 +210,7 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
             />
           ) : (
             <div className="rendered">
-              <BulletText text={draft} />
+              <BulletText text={draft} onToggleCheck={(on) => setText(setChecked(b.text, on))} />
             </div>
           )}
           {acOpen && completion && (
@@ -253,6 +262,12 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
           {menuOpen && (
             <div className="menu" onMouseLeave={() => setMenuOpen(false)}>
               <button onClick={() => { setMenuOpen(false); handlers.zoom(rowIndex); }}>Zoom in</button>
+              <button onClick={() => { setMenuOpen(false); setText(toggleStyle(b.text, "strike")); }}>{struck ? "Remove strike" : "Strike through"}</button>
+              {check === null && <button onClick={() => { setMenuOpen(false); setText(addCheckbox(b.text)); }}>Add checkbox</button>}
+              {check === "checkbox" && <button onClick={() => { setMenuOpen(false); setText(setChecked(b.text, true)); }}>Check ☑</button>}
+              {check === "checked" && <button onClick={() => { setMenuOpen(false); setText(setChecked(b.text, false)); }}>Uncheck ☐</button>}
+              {check !== null && <button onClick={() => { setMenuOpen(false); setText(removeCheckbox(b.text)); }}>Remove checkbox</button>}
+              <button onClick={() => { setMenuOpen(false); handlers.toggleDone(rowIndex); }}>{b.done !== undefined ? "Mark not done" : "Mark done ✓"}</button>
               {!folder && <button onClick={() => { setMenuOpen(false); handlers.convertToFolder(rowIndex); }}>Convert to Folder Bullet…</button>}
               {folder && <button onClick={() => { setMenuOpen(false); handlers.inlineFolder(rowIndex); }}>Inline file back</button>}
               <button className="danger" onClick={() => { setMenuOpen(false); handlers.remove(rowIndex); }}>

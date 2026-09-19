@@ -3,7 +3,7 @@ import type { Bullet } from "./types";
 
 export const OUTLINE_EXT = ".lister";
 
-export const STYLE_KINDS = ["bold", "italic", "highlight", "code", "red", "green", "blue", "yellow", "purple", "grey"] as const;
+export const STYLE_KINDS = ["bold", "italic", "highlight", "code", "strike", "red", "green", "blue", "yellow", "purple", "grey", "checkbox", "checked"] as const;
 const STYLE_SET: ReadonlySet<string> = new Set(STYLE_KINDS);
 
 export type Segment =
@@ -163,6 +163,9 @@ export const COMPLETABLE_KINDS: AnnotationKindInfo[] = [
   { kind: "italic", hint: "[italic:text]", suffix: ":" },
   { kind: "highlight", hint: "[highlight:text]", suffix: ":" },
   { kind: "code", hint: "[code:text]", suffix: ":" },
+  { kind: "strike", hint: "[strike:text]", suffix: ":" },
+  { kind: "checkbox", hint: "[checkbox:text]  unchecked box", suffix: ":" },
+  { kind: "checked", hint: "[checked:text]  checked box", suffix: ":" },
   { kind: "red", hint: "colour", suffix: ":" },
   { kind: "green", hint: "colour", suffix: ":" },
   { kind: "blue", hint: "colour", suffix: ":" },
@@ -210,4 +213,124 @@ export function applyCompletion(text: string, caret: number, c: Completion, pick
   const insert = pick.kind + pick.suffix;
   const next = text.slice(0, headStart) + insert + text.slice(caret);
   return { text: next, caret: headStart + insert.length };
+}
+
+
+// ---------- whole-line style toggles (used by the row menu) ----------
+
+function serialize(segs: Segment[]): string {
+  const esc = (t: string) => t.replace(/\\/g, "\\\\").replace(/\[/g, "\\[").replace(/\]/g, "\\]");
+  return segs
+    .map((s) => (s.kind === "text" ? esc(s.text) : s.value === null ? `[${s.kinds.join(",")}]` : `[${s.kinds.join(",")}:${esc(s.value)}]`))
+    .join("");
+}
+
+/** Does every piece of visible text carry `kind`? (link chips and empty whitespace are ignored) */
+export function hasStyle(text: string, kind: string): boolean {
+  const segs = parseSegments(text);
+  let any = false;
+  for (const s of segs) {
+    if (s.kind === "text") {
+      if (s.text.trim()) return false;
+    } else if (isStyleAnnotation(s.kinds)) {
+      if (!s.kinds.includes(kind)) return false;
+      any = true;
+    }
+  }
+  return any;
+}
+
+/** Add `kind` to all text and style annotations (whitespace-only text stays bare). */
+export function addStyle(text: string, kind: string): string {
+  const out: Segment[] = [];
+  for (const s of parseSegments(text)) {
+    if (s.kind === "text") {
+      const lead = s.text.match(/^\s*/)![0];
+      const trail = s.text.match(/\s*$/)![0];
+      const core = s.text.slice(lead.length, s.text.length - trail.length);
+      if (lead) out.push({ kind: "text", text: lead });
+      if (core) out.push({ kind: "annotation", kinds: [kind], value: core, raw: "" });
+      if (trail) out.push({ kind: "text", text: trail });
+    } else if (isStyleAnnotation(s.kinds) && !s.kinds.includes(kind)) {
+      out.push({ ...s, kinds: [...s.kinds, kind] });
+    } else out.push(s);
+  }
+  return serialize(out);
+}
+
+/** Remove `kind` everywhere; annotations left with no kinds become plain text. */
+export function removeStyle(text: string, kind: string): string {
+  const out: Segment[] = [];
+  for (const s of parseSegments(text)) {
+    if (s.kind === "annotation" && s.kinds.includes(kind)) {
+      const rest = s.kinds.filter((k) => k !== kind);
+      if (rest.length) out.push({ ...s, kinds: rest });
+      else out.push({ kind: "text", text: s.value ?? "" });
+    } else out.push(s);
+  }
+  return serialize(out);
+}
+
+export function toggleStyle(text: string, kind: string): string {
+  return hasStyle(text, kind) ? removeStyle(text, kind) : addStyle(text, kind);
+}
+
+export type CheckState = "checkbox" | "checked" | null;
+
+/** null = no checkbox; "checked" only when every box is checked. */
+export function checkState(text: string): CheckState {
+  let box = false;
+  let checked = false;
+  for (const s of parseSegments(text)) {
+    if (s.kind !== "annotation") continue;
+    if (s.kinds.includes("checkbox")) box = true;
+    if (s.kinds.includes("checked")) checked = true;
+  }
+  if (!box && !checked) return null;
+  return box ? "checkbox" : "checked";
+}
+
+/** Swap every `checkbox` for `checked` or vice versa. */
+export function setChecked(text: string, checked: boolean): string {
+  const from = checked ? "checkbox" : "checked";
+  const to = checked ? "checked" : "checkbox";
+  const out = parseSegments(text).map((s) =>
+    s.kind === "annotation" && s.kinds.includes(from) ? { ...s, kinds: s.kinds.map((k) => (k === from ? to : k)) } : s,
+  );
+  return serialize(out);
+}
+
+/** One box at the start of the line: wrap the first visible text segment (or tag the first style annotation). */
+export function addCheckbox(text: string): string {
+  const segs = parseSegments(text);
+  const out: Segment[] = [];
+  let done = false;
+  for (const s of segs) {
+    if (done) {
+      out.push(s);
+      continue;
+    }
+    if (s.kind === "text") {
+      const lead = s.text.match(/^\s*/)![0];
+      const core = s.text.slice(lead.length);
+      if (!core.trim()) {
+        out.push(s);
+        continue;
+      }
+      // label = first word run up to the next annotation; keep trailing text plain
+      if (lead) out.push({ kind: "text", text: lead });
+      out.push({ kind: "annotation", kinds: ["checkbox"], value: core.trimEnd(), raw: "" });
+      const trail = core.slice(core.trimEnd().length);
+      if (trail) out.push({ kind: "text", text: trail });
+      done = true;
+    } else if (isStyleAnnotation(s.kinds)) {
+      out.push({ ...s, kinds: [...s.kinds, "checkbox"] });
+      done = true;
+    } else out.push(s);
+  }
+  return serialize(out);
+}
+
+export function removeCheckbox(text: string): string {
+  return removeStyle(removeStyle(text, "checkbox"), "checked");
 }

@@ -9,8 +9,10 @@ export const METADATA_KINDS = ["id", "folder", "date", "priority", "done"] as co
 export type MetadataKind = (typeof METADATA_KINDS)[number];
 
 export const STYLE_KINDS = [
-  "bold", "italic", "highlight", "code",
+  "bold", "italic", "highlight", "code", "strike",
   "red", "green", "blue", "yellow", "purple", "grey",
+  // inline checkbox: `[checkbox:text]` unchecked, `[checked:text]` checked
+  "checkbox", "checked",
 ] as const;
 export type StyleKind = (typeof STYLE_KINDS)[number];
 
