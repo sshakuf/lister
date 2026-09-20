@@ -107,6 +107,7 @@ function lineToBullet(content: string, seen: Set<string>): { bullet: Bullet; hea
   seen.add(id);
   const bullet: Bullet = { id, text, children: [] };
   if (typeof meta.folder === "string" && meta.folder) bullet.folder = expandHome(meta.folder);
+  if (typeof meta.outline === "string" && meta.outline) bullet.outline = meta.outline;
   if (typeof meta.date === "string") bullet.date = meta.date;
   if (typeof meta.priority === "string") {
     const p = Number(meta.priority);
@@ -120,6 +121,7 @@ function lineToBullet(content: string, seen: Set<string>): { bullet: Bullet; hea
 export function bulletMetadata(b: Bullet): Metadata {
   const meta: Metadata = { id: b.id };
   if (b.folder) meta.folder = contractHome(b.folder);
+  if (b.outline) meta.outline = b.outline;
   if (b.date) meta.date = b.date;
   if (b.priority) meta.priority = String(b.priority);
   if (b.done !== undefined) meta.done = b.done === "" ? true : b.done;
@@ -156,6 +158,7 @@ export function renderPlain(bullets: Bullet[], opts: { ids?: boolean } = {}): st
       const flags: string[] = [];
       if (b.done !== undefined) flags.push("done");
       if (b.folder) flags.push("folder:" + contractHome(b.folder));
+      if (b.outline) flags.push("outline:" + b.outline);
       if (b.date) flags.push("date:" + b.date);
       if (b.priority) flags.push("!" + b.priority);
       let line = INDENT.repeat(depth) + "- " + b.text;

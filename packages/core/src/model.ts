@@ -8,6 +8,8 @@ export interface Bullet {
   note?: string;
   /** Absolute directory path when this is a Folder Bullet. */
   folder?: string;
+  /** Shared Outline File identity; never a local filesystem path. */
+  outline?: string;
   /** YYYY-MM-DD or YYYY-MM-DDTHH:mm */
   date?: string;
   priority?: 1 | 2 | 3;
@@ -28,5 +30,6 @@ export interface OutlineFile {
 }
 
 export function isFolderBullet(b: Bullet): boolean {
-  return typeof b.folder === "string" && b.folder.length > 0;
+  return (typeof b.folder === "string" && b.folder.length > 0) ||
+    (typeof b.outline === "string" && b.outline.length > 0);
 }

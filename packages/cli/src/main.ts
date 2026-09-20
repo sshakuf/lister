@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { installHiveCommands } from "./hive.js";
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
@@ -122,7 +123,7 @@ program
     const { startServer } = await import("@lister/server");
     const srv = await startServer({ port: opts.port, host: opts.host });
     out(`lister server listening on http://${srv.host}:${srv.port}`);
-    if (srv.host !== "127.0.0.1") out(`note: no authentication; only bind to networks you trust (a Tailscale IP or tailnet is fine)`);
+    if (srv.host !== "127.0.0.1") out(`note: standalone mode has no authentication; hive mode requires remote credentials. Only bind to trusted networks.`);
     const stop = async () => {
       await srv.close();
       process.exit(0);
@@ -205,4 +206,5 @@ async function startDaemon(port?: number, host?: string): Promise<number> {
   return child.pid ?? -1;
 }
 
+installHiveCommands(program);
 await program.parseAsync(process.argv);

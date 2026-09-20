@@ -4,7 +4,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "./hive": { "types": "./dist/hive.d.ts", "default": "./dist/hive.js" } },
   "files": ["dist"],
   "scripts": {
     "build": "tsc -p tsconfig.json",

@@ -1,3 +1,5 @@
+import { HivePanel } from "./HivePanel";
+import { useHive } from "../hive/client";
 import { FontSizeControl } from "./FontSizeControl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../api";
@@ -6,6 +8,7 @@ import { useUi } from "../ui";
 import { useStore } from "../store";
 
 export function Admin() {
+  const hiveView = useHive();
   const [report, setReport] = useState<AdminReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [relinking, setRelinking] = useState<{ id: string; value: string } | null>(null);
@@ -52,13 +55,14 @@ export function Admin() {
   return (
     <div className="admin">
       <h1>Admin</h1>
+      <HivePanel />
       <section>
         <h2>Display</h2>
         <FontSizeControl />
       </section>
       {error && <div className="error-inline">{error}</div>}
-      {!report && <div>Loading…</div>}
-      {report && (
+      {!report && !hiveView.enabled && <div>Loading…</div>}
+      {report && !hiveView.enabled && (
         <>
           <section>
             <h2>Folder Bullets ({report.folders.length})</h2>

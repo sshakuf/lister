@@ -97,6 +97,7 @@ export function plainText(line: string): string {
 }
 
 export function folderFilePath(b: Bullet): string {
+  if (b.outline) return `hive:${b.outline}`;
   const dir = (b.folder ?? "").replace(/\/+$/, "");
   return `${dir}/${slugify(plainText(b.text))}${OUTLINE_EXT}`;
 }

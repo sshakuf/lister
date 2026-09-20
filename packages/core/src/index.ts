@@ -7,3 +7,4 @@ export * from "./tree.js";
 export * from "./dates.js";
 export * from "./merge.js";
 export * from "./opml.js";
+export * from "./hive.js";

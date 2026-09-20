@@ -5,7 +5,7 @@
  * No nesting. `\[` and `\]` are literal brackets.
  */
 
-export const METADATA_KINDS = ["id", "folder", "date", "priority", "done"] as const;
+export const METADATA_KINDS = ["id", "folder", "outline", "date", "priority", "done"] as const;
 export type MetadataKind = (typeof METADATA_KINDS)[number];
 
 export const STYLE_KINDS = [

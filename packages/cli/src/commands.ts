@@ -80,7 +80,7 @@ export async function resolveFile(ctx: Ctx, opts: { file?: string; under?: strin
   if (opts.under) {
     const loc = await ctx.backend.locate(opts.under);
     if (isFolderBullet(loc.bullet)) {
-      const fp = folderFilePath(loc.bullet.folder!, loc.bullet.text);
+      const fp = loc.bullet.outline ? `hive:${loc.bullet.outline}` : folderFilePath(loc.bullet.folder!, loc.bullet.text);
       return { filePath: fp, parentId: null };
     }
     return { filePath: loc.filePath, parentId: loc.bullet.id };

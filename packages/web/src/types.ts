@@ -6,6 +6,7 @@ export interface Bullet {
   text: string;
   note?: string;
   folder?: string;
+  outline?: string;
   date?: string;
   priority?: 1 | 2 | 3;
   done?: string;
@@ -28,6 +29,7 @@ export interface Hit {
   path: string[];
   done?: string;
   folder?: string;
+  outline?: string;
 }
 
 export interface FolderEntry {
@@ -70,5 +72,5 @@ export interface BulletPatch {
 }
 
 export function isFolderBullet(b: Bullet): boolean {
-  return typeof b.folder === "string" && b.folder.length > 0;
+  return !!b.outline || (typeof b.folder === "string" && b.folder.length > 0);
 }

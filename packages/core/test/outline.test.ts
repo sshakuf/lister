@@ -60,3 +60,15 @@ test("blank lines and CRLF are tolerated", () => {
   const { file } = parseOutline("# T [id:aaaaaaaa]\r\n\r\n- a [id:c0000001]\r\n\r\n", "/x/t.lister");
   assert.equal(file.bullets.length, 1);
 });
+
+test('remote outline references round-trip as identities without local paths', async () => {
+  const { isFolderBullet } = await import('../src/model.ts');
+  const source = '# Root [id:aaaaaaaa]\n- Remote [id:bbbbbbbb] [outline:cccccccc]\n';
+  const { file, healed } = parseOutline(source, '/local/root.lister');
+  assert.equal(file.bullets[0].text, 'Remote');
+  assert.equal(file.bullets[0].outline, 'cccccccc');
+  assert.equal(file.bullets[0].folder, undefined);
+  assert.equal(isFolderBullet(file.bullets[0]), true);
+  assert.equal(healed, false);
+  assert.equal(serializeOutline(file), source);
+});

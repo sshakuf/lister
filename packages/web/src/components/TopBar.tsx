@@ -1,7 +1,9 @@
+import { useHive } from "../hive/client";
 import { useStore } from "../store";
 import { useUi } from "../ui";
 
 export function TopBar() {
+  const hive = useHive();
   const route = useStore((s) => s.route);
   const wsOpen = useStore((s) => s.wsOpen);
   const error = useStore((s) => s.error);
@@ -33,6 +35,7 @@ export function TopBar() {
         <button className="ghost desktop-only" disabled={!redoN} onClick={() => useStore.getState().redo()} title="Redo (⇧⌘Z)">
           ↷
         </button>
+        {hive.enabled && <a href="#/admin" className="hive-indicator" title="Browser save, hub receipt and owner disk status">{hive.saving || hive.drafts ? 'Saving…' : hive.state?.outbox.length ? `Saved here · ${hive.state.outbox.length} pending` : !hive.online ? 'Saved here · offline' : hive.status?.pending ? `Saved here · ${hive.status.pending} awaiting hub` : hive.status?.connected ? 'Saved · hub received' : 'Saved here · hub offline'}</a>}
         <span className={`ws ${wsOpen ? "on" : "off"}`} title={wsOpen ? "Live updates connected" : "Live updates disconnected"} />
       </header>
       {error && (

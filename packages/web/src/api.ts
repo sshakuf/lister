@@ -1,28 +1,8 @@
 import type { AdminReport, Bullet, BulletPatch, Hit, LocatedBullet, OutlineFile } from "./types";
 
-export class ApiError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-    this.name = "ApiError";
-  }
-}
-
-async function req<T>(method: string, url: string, body?: unknown, contentType = "application/json"): Promise<T> {
-  const res = await fetch(url, {
-    method,
-    headers: body !== undefined ? { "content-type": contentType } : undefined,
-    body: body === undefined ? undefined : contentType === "application/json" ? JSON.stringify(body) : (body as string),
-  });
-  const text = await res.text();
-  let data: any = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = { error: text };
-  }
-  if (!res.ok) throw new ApiError(res.status, data?.error ?? res.statusText);
-  return data as T;
-}
+import { hive } from "./hive/client";
+import { request as req } from "./hive/http";
+export { ApiError } from "./hive/http";
 
 const q = (obj: Record<string, string | undefined>) =>
   Object.entries(obj)
@@ -32,25 +12,25 @@ const q = (obj: Record<string, string | undefined>) =>
 
 export const api = {
   health: () => req<{ ok: boolean }>("GET", "/api/health"),
-  root: () => req<OutlineFile>("GET", "/api/root"),
-  file: (path: string) => req<OutlineFile>("GET", `/api/files?${q({ path })}`),
-  getBullet: (id: string) => req<LocatedBullet>("GET", `/api/bullets/${id}`),
+  root: async () => (await hive.initialize()) ? hive.root() : req<OutlineFile>("GET", "/api/root"),
+  file: (path: string) => hive.active ? hive.file(path) : req<OutlineFile>("GET", `/api/files?${q({ path })}`),
+  getBullet: (id: string) => hive.active ? hive.bullet(id) : req<LocatedBullet>("GET", `/api/bullets/${id}`),
   addBullet: (filePath: string, parentId: string | null, index: number, text: string) =>
-    req<Bullet>("POST", "/api/bullets", { filePath, parentId, index, text }),
-  patchBullet: (id: string, patch: BulletPatch) => req<Bullet>("PATCH", `/api/bullets/${id}`, patch),
+    hive.active ? hive.add(filePath, parentId, index, text) : req<Bullet>("POST", "/api/bullets", { filePath, parentId, index, text }),
+  patchBullet: (id: string, patch: BulletPatch) => hive.active ? hive.patch(id, patch) : req<Bullet>("PATCH", `/api/bullets/${id}`, patch),
   moveBullet: (id: string, filePath: string, parentId: string | null, index: number) =>
-    req<{ ok: true }>("POST", `/api/bullets/${id}/move`, { filePath, parentId, index }),
-  deleteBullet: (id: string) => req<{ ok: true; detached: boolean }>("DELETE", `/api/bullets/${id}`),
-  toFolder: (id: string, folder: string) => req<Bullet>("POST", `/api/bullets/${id}/to-folder`, { folder }),
-  inline: (id: string) => req<Bullet>("POST", `/api/bullets/${id}/inline`),
-  search: (query: string) => req<{ hits: Hit[] }>("GET", `/api/search?${q({ q: query })}`),
+    hive.active ? hive.move(id, filePath, parentId, index) : req<{ ok: true }>("POST", `/api/bullets/${id}/move`, { filePath, parentId, index }),
+  deleteBullet: (id: string) => hive.active ? hive.remove(id) : req<{ ok: true; detached: boolean }>("DELETE", `/api/bullets/${id}`),
+  toFolder: (id: string, folder: string) => hive.active ? hive.ownerAction<Bullet>(`/api/bullets/${id}/to-folder`, { folder }) : req<Bullet>("POST", `/api/bullets/${id}/to-folder`, { folder }),
+  inline: (id: string) => hive.active ? hive.ownerAction<Bullet>(`/api/bullets/${id}/inline`) : req<Bullet>("POST", `/api/bullets/${id}/inline`),
+  search: (query: string) => hive.active ? hive.search(query) : req<{ hits: Hit[] }>("GET", `/api/search?${q({ q: query })}`),
   dirs: (path: string) => req<{ dirs: string[] }>("GET", `/api/fs/dirs?${q({ path })}`),
   recent: () => req<{ recent: string[] }>("GET", "/api/fs/recent"),
   adminFolders: () => req<AdminReport>("GET", "/api/admin/folders"),
-  adminMove: (id: string, folder: string) => req<Bullet>("POST", "/api/admin/move", { id, folder }),
-  adminRelink: (id: string, filePath: string) => req<Bullet>("POST", "/api/admin/relink", { id, filePath }),
+  adminMove: (id: string, folder: string) => hive.active ? hive.ownerAction<Bullet>("/api/admin/move", { id, folder }) : req<Bullet>("POST", "/api/admin/move", { id, folder }),
+  adminRelink: (id: string, filePath: string) => hive.active ? hive.ownerAction<Bullet>("/api/admin/relink", { id, filePath }) : req<Bullet>("POST", "/api/admin/relink", { id, filePath }),
   adminAdopt: (filePath: string, parentId?: string) => req<Bullet>("POST", "/api/admin/adopt", { filePath, parentId }),
   adminTrash: (filePath: string) => req<{ trashed: string; detached?: string }>("POST", "/api/admin/trash", { filePath }),
   importOpml: (xml: string, parentId?: string) =>
-    req<{ imported: number; filePath: string }>("POST", `/api/import/opml${parentId ? `?${q({ parentId })}` : ""}`, xml, "text/xml"),
+    hive.active ? hive.importOpml(xml, parentId) : req<{ imported: number; filePath: string }>("POST", `/api/import/opml${parentId ? `?${q({ parentId })}` : ""}`, xml, "text/xml"),
 };

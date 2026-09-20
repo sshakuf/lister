@@ -1,3 +1,5 @@
+import type { HiveAgent } from "./hive/agent.js";
+import { registerHiveRoutes } from "./hive/routes.js";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -18,13 +20,17 @@ export interface AppDeps {
   /** directory holding the built web client (index.html); optional */
   webDist?: string;
   logger?: boolean;
+  hive?: HiveAgent;
+  onHiveEnable?: () => Promise<void>;
+  beforeHiveEnable?: () => Promise<void>;
 }
 
 type Socket = { send(data: string): void; readyState: number };
 
 export function buildApp(deps: AppDeps): FastifyInstance & { broadcast(msg: object): void } {
   const { store, search, admin } = deps;
-  const app = Fastify({ logger: deps.logger ?? false });
+  const app = Fastify({ logger: deps.logger ?? false, bodyLimit: 16 * 1024 * 1024 });
+  if (deps.hive) registerHiveRoutes(app, deps.hive, store.rootPath, deps.onHiveEnable ?? (async () => {}), deps.beforeHiveEnable);
   const sockets = new Set<Socket>();
   const broadcast = (msg: object) => {
     const data = JSON.stringify(msg);
@@ -47,6 +53,7 @@ export function buildApp(deps: AppDeps): FastifyInstance & { broadcast(msg: obje
 
   app.addHook("onReady", async () => {
     // index everything reachable
+    if (deps.hive?.enabled) return;
     const { files } = await admin.allFiles();
     for (const f of files) search.index(f);
   });

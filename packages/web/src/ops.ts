@@ -1,5 +1,7 @@
 // Mutations: optimistic local update → API call → refetch affected files → undo entry.
 import { api } from "./api";
+import { hive } from "./hive/client";
+import { permanentId } from "./hive/replica";
 import { useStore } from "./store";
 import type { Bullet, BulletPatch } from "./types";
 import { isFolderBullet } from "./types";
@@ -28,11 +30,11 @@ function rawLine(b: Bullet): string {
 }
 
 export async function addBullet(filePath: string, parentId: string | null, index: number, text: string, opts: { focus?: boolean; undo?: boolean } = {}): Promise<Bullet | null> {
-  const tempId = `tmp-${Math.random().toString(36).slice(2, 10)}`;
+  const tempId = hive.active ? permanentId() : `tmp-${Math.random().toString(36).slice(2, 10)}`;
   const temp: Bullet = { id: tempId, text, children: [] };
   localUpdate(filePath, (bs) => insertBullet(bs, parentId, index, temp));
   try {
-    const b = await api.addBullet(filePath, parentId, index, text);
+    const b = hive.active ? await hive.add(filePath, parentId, index, text, tempId) : await api.addBullet(filePath, parentId, index, text);
     localUpdate(filePath, (bs) => insertBullet(removeBullet(bs, tempId).bullets, parentId, index, b));
     if (opts.focus !== false) S().setFocus({ id: b.id, caret: 0 });
     if (opts.undo !== false) {
@@ -43,7 +45,8 @@ export async function addBullet(filePath: string, parentId: string | null, index
           await S().refetch(filePath);
         },
         redo: async () => {
-          await api.addBullet(filePath, parentId, index, rawLine(b));
+          if (hive.active) await hive.restore(filePath, parentId, index, b);
+          else await api.addBullet(filePath, parentId, index, rawLine(b));
           await S().refetch(filePath);
         },
       });
@@ -79,7 +82,7 @@ export async function patchBullet(filePath: string, id: string, patch: BulletPat
       });
     }
     // renaming a Folder Bullet renames its file: drop the stale child file entry
-    if (before && isFolderBullet(before) && patch.text !== undefined && patch.text !== before.text) {
+    if (!hive.active && before && isFolderBullet(before) && patch.text !== undefined && patch.text !== before.text) {
       const old = folderFilePath(before);
       const files = { ...S().files };
       if (files[old]) {
@@ -155,7 +158,9 @@ export async function deleteBullet(filePath: string, id: string, opts: { undo?: 
       S().pushUndo({
         label: "delete",
         undo: async () => {
-          if (isFolderBullet(snapshot)) {
+          if (hive.active) {
+            await hive.restore(filePath, parentId, index, snapshot);
+          } else if (isFolderBullet(snapshot)) {
             // detached only: re-adopt the file under the same parent
             await api.adminAdopt(folderFilePath(snapshot), parentId ?? undefined);
           } else {
@@ -167,7 +172,7 @@ export async function deleteBullet(filePath: string, id: string, opts: { undo?: 
           // ids changed on recreate; find by text at the same position
           const cur = S().files[filePath];
           const list = cur ? (parentId ? findBullet(cur.bullets, parentId)?.bullet.children : cur.bullets) : undefined;
-          const target = list?.[index] ?? list?.find((x) => x.text === snapshot.text);
+          const target = hive.active ? list?.find((x) => x.id === snapshot.id) : list?.[index] ?? list?.find((x) => x.text === snapshot.text);
           if (target) await api.deleteBullet(target.id);
           await S().refetch(filePath);
         },

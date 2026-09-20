@@ -9,6 +9,7 @@ import { RowMenu } from "./RowMenu";
 import { BulletText } from "./BulletText";
 import { AnnotationMenu } from "./AnnotationMenu";
 import { useStore } from "../store";
+import { hive } from "../hive/client";
 import { toolbarTouching } from "../ui";
 
 export interface RowHandlers {
@@ -88,14 +89,17 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
   }, [draft, editing]);
 
   const cancelPending = () => {
+    hive.draft(b.id, false);
     if (commitTimer.current) clearTimeout(commitTimer.current);
     commitTimer.current = null;
   };
 
   const scheduleCommit = (value: string) => {
     cancelPending();
+    hive.draft(b.id, true);
     commitTimer.current = window.setTimeout(() => {
       commitTimer.current = null;
+      hive.draft(b.id, false);
       dirty.current = false;
       handlers.commit(row.filePath, b.id, value);
     }, 600);
