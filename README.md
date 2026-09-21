@@ -139,6 +139,8 @@ registration includes their reachable local Folder Bullets. A registered file
 appears as a branch under the shared Root Outline. Existing IDs stay intact;
 copied files with colliding IDs must be resolved before registration.
 
+For **Continue with Google** on iPhone and Mac browsers, see [Google login setup](docs/google-login-setup.md). Google login uses an owner allowlist and independent browser sessions; local recovery access remains available.
+
 The web app offers hive setup and controls in Admin. For a remote browser,
 obtain its access token on the computer serving that browser:
 
