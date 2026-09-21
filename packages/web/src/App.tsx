@@ -1,3 +1,4 @@
+import { StartupContent, startupErrorMessage } from './components/StartupContent';
 import { hive, useHive } from "./hive/client";
 import { HiveLogin } from "./components/HivePanel";
 import { useEffect } from "react";
@@ -32,7 +33,7 @@ export function App() {
       useStore.setState({files, rootPath: state.snapshot.rootFileId ? `hive:${state.snapshot.rootFileId}` : null});
     };
     const unsubscribe = hive.subscribe(update);
-    useStore.getState().init().catch((e) => useStore.getState().setError(`Cannot reach the Lister server: ${e.message}`));
+    useStore.getState().init().catch((e) => useStore.getState().setError(startupErrorMessage(e)));
     const dispose = connectWs(
       (m) => {
         const s = useStore.getState();
@@ -78,7 +79,7 @@ export function App() {
       <TopBar />
       <main>
         {hiveView.authRequired && route !== "admin" && <HiveLogin />}
-        {route === "admin" ? <Admin /> : ready ? <Outline /> : <div className="outline loading">{error ? <><p>{error}</p><button onClick={() => useStore.getState().init().then(() => useStore.getState().setError(null)).catch(e => useStore.getState().setError(e.message))}>Retry connection</button> <a href="#/admin">Set up a hive</a></> : 'Connecting…'}</div>}
+        {route === "admin" ? <Admin /> : <StartupContent ready={ready} authRequired={hiveView.authRequired} error={error} onRetry={() => { void useStore.getState().init().then(() => useStore.getState().setError(null)).catch(e => useStore.getState().setError(startupErrorMessage(e))); }}><Outline /></StartupContent>}
       </main>
       <SearchPalette />
       {picker && <FolderPicker title={picker.title} onPick={picker.onPick} onClose={closePicker} />}
