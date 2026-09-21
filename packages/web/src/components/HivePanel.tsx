@@ -11,18 +11,24 @@ export function HiveLogin() {
   const [token,setToken]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
-  return <section className="hive-login">
-    <h2>Connect to this computer</h2>
-    {config?.google && <p>{view.saving || view.drafts ? 'Saving edits before sign-in…' : <a className="button" href={config.loginUrl}>Sign in with Google</a>}</p>}
-    {new URLSearchParams(window.location.search).get('login')==='failed' && <p className="error-inline">Google sign-in failed. Use the owner account and try again.</p>}
-    <p>Sign-in needs an internet connection. Saved lists and pending edits stay on this browser.</p>
-    <details open={!config?.google}><summary>Use a recovery token</summary>
+  return <section className="hive-login" aria-labelledby="sign-in-title">
+    <div className="login-mark" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><circle cx="10" cy="11" r="2" fill="currentColor"/><circle cx="10" cy="20" r="2" fill="currentColor"/><circle cx="10" cy="29" r="2" fill="currentColor"/><path d="M18 11h12M18 20h9M18 29h12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg></div>
+    <p className="login-eyebrow">YOUR PERSONAL HIVE</p>
+    <h2 id="sign-in-title">Welcome to Lister</h2>
+    <p className="login-intro">Your lists, together.<br />Pick up where you left off, on any device.</p>
+    {config?.google && <div className="login-action">{view.saving || view.drafts ? <p role="status">Saving your edits before sign-in…</p> : <a className="google-signin" href={config.loginUrl}>
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#4285F4" d="M43.61 24.46c0-1.36-.12-2.66-.35-3.92H24v7.42h11a9.4 9.4 0 0 1-4.08 6.18v5.14h6.61c3.86-3.55 6.08-8.78 6.08-14.82Z"/><path fill="#34A853" d="M24 44c5.5 0 10.11-1.82 13.48-4.94l-6.61-5.14c-1.83 1.23-4.17 1.97-6.87 1.97-5.3 0-9.8-3.58-11.41-8.4H5.76v5.3A20 20 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.59 27.49a12 12 0 0 1 0-6.98v-5.3H5.76a20 20 0 0 0 0 17.58l6.83-5.3Z"/><path fill="#EA4335" d="M24 12.11c3 0 5.68 1.03 7.8 3.05l5.85-5.86C34.1 5.99 29.5 4 24 4A20 20 0 0 0 5.76 15.21l6.83 5.3c1.61-4.82 6.11-8.4 11.41-8.4Z"/></svg>
+      Continue with Google
+    </a>}</div>}
+    {new URLSearchParams(window.location.search).get('login')==='failed' && <p className="login-error" role="alert">Google sign-in failed. Use the owner account and try again.</p>}
+    <div className="login-reassurance"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z" stroke="currentColor" strokeWidth="1.5"/><path d="m8 12 3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg><p>Your saved lists stay with you.<br /><span>Sign in online to sync your offline edits.</span></p></div>
+    <details className="login-recovery" open={config?.google === false}><summary>Use a recovery token</summary>
     <p>For recovery, run <code>lister hive token</code> on the computer serving this page, then enter its access token.</p>
     <form onSubmit={async e=>{e.preventDefault();setBusy(true);try{await hive.login(token.trim());await useStore.getState().init();setToken('');setError('');}catch(error){setError((error as Error).message);}finally{setBusy(false);}}}>
       <label>Device access token <input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} required /></label>
-      <button disabled={busy || !token.trim()} type="submit">{busy?'Connecting…':'Connect'}</button>
+      <button className="login-connect" disabled={busy || !token.trim()} type="submit">{busy?'Connecting…':'Connect'}</button>
     </form></details>
-    {error && <p className="error-inline">{error}</p>}
+    {error && <p className="login-error" role="alert">{error}</p>}
   </section>;
 }
 

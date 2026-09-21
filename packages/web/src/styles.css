@@ -237,7 +237,39 @@ main { flex: 1; }
 .hive-form label { flex: 1; min-width: 230px; margin: 0; }
 .hive-status { display: grid; grid-template-columns: auto 1fr; gap: 8px 20px; }
 .hive-status dd { margin: 0; }
-.hive-login { padding: 20px; max-width: 680px; margin: 12px auto; }
+/* Sign-in shares the outline palette and remains compact beside cached lists. */
+.app-signin .topbar { position: static; min-height: 64px; padding: 18px 28px; border: 0; }
+.app-signin .topbar > :not(.brand) { display: none; }
+.app-signin main { display: grid; place-items: center; padding: 32px 20px 80px; background: radial-gradient(ellipse at 50% 38%, var(--accent-bg), transparent 65%); }
+.hive-login { width: min(100%, 440px); padding: 36px; margin: 32px auto; border: 1px solid var(--line); border-radius: 24px; background: var(--modal); box-shadow: 0 16px 48px #00000008; }
+.app-signin .hive-login { margin: 0; }
+.login-mark { display: grid; place-items: center; width: 60px; height: 60px; margin: 0 auto 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--accent-bg); color: var(--accent); }
+.login-mark svg { width: 40px; height: 40px; }
+.hive-login .login-eyebrow { margin: 0 0 10px; text-align: center; font-size: 10px; font-weight: 650; letter-spacing: .16em; color: var(--muted); }
+.hive-login h2 { margin: 0; text-align: center; font-size: clamp(26px, 5vw, 30px); line-height: 1.2; font-weight: 650; letter-spacing: -.035em; }
+.login-intro { margin: 14px 0 28px; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.65; }
+.login-action { margin-bottom: 24px; text-align: center; }
+.google-signin { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 12px 18px; border: 1px solid #747775; border-radius: 10px; background: #fff; color: #1f1f1f; font-size: 15px; font-weight: 500; text-decoration: none; transition: background .15s, box-shadow .15s; }
+.google-signin svg { width: 20px; height: 20px; flex-shrink: 0; }
+.google-signin:hover { background: #f8faff; box-shadow: 0 2px 8px #0000000c; }
+.google-signin:focus-visible, .login-recovery summary:focus-visible, .login-connect:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.login-reassurance { display: flex; gap: 10px; justify-content: center; align-items: flex-start; color: var(--muted); }
+.login-reassurance > svg { width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; color: var(--accent); }
+.login-reassurance p { margin: 0; font-size: 12px; line-height: 1.7; }
+.login-reassurance span { color: var(--muted); }
+.login-recovery { margin-top: 26px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+.login-recovery summary { width: fit-content; margin: 0 auto; cursor: pointer; padding: 4px; }
+.login-recovery p { line-height: 1.6; }
+.login-recovery code { color: var(--fg); overflow-wrap: anywhere; }
+.login-recovery input { min-height: 44px; font-size: 16px; }
+.login-connect { width: 100%; min-height: 44px; color: var(--fg); background: var(--hover); }
+.login-error { margin: 16px 0; padding: 12px; border-radius: 8px; background: var(--hover); color: var(--danger); font-size: 13px; line-height: 1.5; }
+@media (max-width: 480px) {
+ .app-signin .topbar { min-height: 56px; padding: 16px 20px; }
+ .app-signin main { align-items: start; padding: 24px 16px 40px; }
+ .hive-login { padding: 28px 24px; border-radius: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .google-signin { transition: none; } }
 .hive-conflict { border: 1px solid var(--border, #ddd); padding: 14px; margin: 12px 0; border-radius: 8px; }
 .hive-conflict pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
 .hive-indicator { font-size: 12px; max-width: 210px; text-align: right; }

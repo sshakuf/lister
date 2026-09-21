@@ -75,7 +75,7 @@ export function App() {
   }, []);
 
   return (
-    <div className="app">
+    <div className={`app${hiveView.authRequired && !ready && route !== "admin" ? " app-signin" : ""}`}>
       <TopBar />
       <main>
         {hiveView.authRequired && route !== "admin" && <HiveLogin />}
