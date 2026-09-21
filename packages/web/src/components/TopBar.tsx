@@ -1,3 +1,4 @@
+const hiveMark = new URL("../assets/hive-mark.svg", import.meta.url).href;
 import { useHive } from "../hive/client";
 import { useStore } from "../store";
 import { useUi } from "../ui";
@@ -15,7 +16,7 @@ export function TopBar() {
     <>
       <header className="topbar">
         <a className={`brand ${route === "outline" ? "active" : ""}`} href="#/">
-          Lister
+          <img src={hiveMark} alt="" width="28" height="28" />Lister
         </a>
         <nav>
           <a className={route === "outline" ? "active" : ""} href="#/">

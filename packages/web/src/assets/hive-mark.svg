@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="#C45324">
+  <defs>
+    <g id="cell">
+      <path d="M-3-22Q0-24 3-22L18-13Q21-11 21-7V9Q21 13 18 15L3 24Q0 26-3 24L-18 15Q-21 13-21 9V-7Q-21-11-18-13Z"/>
+      <path d="M-10-4H10M-10 6H10" stroke="white" stroke-width="5" stroke-linecap="round"/>
+    </g>
+  </defs>
+  <use href="#cell" x="50" y="26"/>
+  <use href="#cell" x="26" y="63"/>
+  <use href="#cell" x="74" y="63"/>
+</svg>

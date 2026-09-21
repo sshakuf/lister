@@ -1,3 +1,4 @@
+const hiveIcon = new URL("../assets/lister-app-icon.png", import.meta.url).href;
 import { request, logout, type BrowserSession } from '../hive/http';
 import { useEffect, useState } from 'react';
 import { hive, useHive } from '../hive/client';
@@ -12,7 +13,7 @@ export function HiveLogin() {
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
   return <section className="hive-login" aria-labelledby="sign-in-title">
-    <div className="login-mark" aria-hidden="true"><svg viewBox="0 0 40 40" fill="none"><circle cx="10" cy="11" r="2" fill="currentColor"/><circle cx="10" cy="20" r="2" fill="currentColor"/><circle cx="10" cy="29" r="2" fill="currentColor"/><path d="M18 11h12M18 20h9M18 29h12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg></div>
+    <div className="login-mark" aria-hidden="true"><img src={hiveIcon} alt="" width="72" height="72" /></div>
     <p className="login-eyebrow">YOUR PERSONAL HIVE</p>
     <h2 id="sign-in-title">Welcome to Lister</h2>
     <p className="login-intro">Your lists, together.<br />Pick up where you left off, on any device.</p>

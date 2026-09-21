@@ -75,7 +75,7 @@ main { flex: 1; }
 
 /* top bar */
 .topbar { display: flex; align-items: center; gap: 14px; padding: 8px 20px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
-.brand { font-weight: 700; text-decoration: none; color: var(--fg); letter-spacing: 0.3px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; font-weight: 700; text-decoration: none; color: var(--fg); letter-spacing: 0.3px; }
 .topbar nav { display: flex; gap: 4px; }
 .topbar nav a { text-decoration: none; color: var(--muted); padding: 3px 10px; border-radius: 6px; }
 .topbar nav a.active { color: var(--fg); background: var(--hover); }
@@ -243,8 +243,8 @@ main { flex: 1; }
 .app-signin main { display: grid; place-items: center; padding: 32px 20px 80px; background: radial-gradient(ellipse at 50% 38%, var(--accent-bg), transparent 65%); }
 .hive-login { width: min(100%, 440px); padding: 36px; margin: 32px auto; border: 1px solid var(--line); border-radius: 24px; background: var(--modal); box-shadow: 0 16px 48px #00000008; }
 .app-signin .hive-login { margin: 0; }
-.login-mark { display: grid; place-items: center; width: 60px; height: 60px; margin: 0 auto 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--accent-bg); color: var(--accent); }
-.login-mark svg { width: 40px; height: 40px; }
+.login-mark { width: 72px; height: 72px; margin: 0 auto 24px; border-radius: 20px; overflow: hidden; }
+.login-mark img { display: block; width: 100%; height: 100%; }
 .hive-login .login-eyebrow { margin: 0 0 10px; text-align: center; font-size: 10px; font-weight: 650; letter-spacing: .16em; color: var(--muted); }
 .hive-login h2 { margin: 0; text-align: center; font-size: clamp(26px, 5vw, 30px); line-height: 1.2; font-weight: 650; letter-spacing: -.035em; }
 .login-intro { margin: 14px 0 28px; text-align: center; color: var(--muted); font-size: 15px; line-height: 1.65; }
