@@ -7,6 +7,7 @@ import type { Bullet, BulletPatch } from "./types";
 import { isFolderBullet } from "./types";
 import { findBullet, insertBullet, moveBullet, removeBullet, updateBullet } from "./tree";
 import { folderFilePath } from "./format";
+import { checkboxChanges } from "./checkbox-conversion";
 
 const S = () => useStore.getState();
 
@@ -206,5 +207,44 @@ export async function inlineFolder(filePath: string, b: Bullet): Promise<void> {
     await S().refetch(filePath);
   } catch (e) {
     fail(e);
+  }
+}
+
+/** Convert the selected bullet and its direct children as one undoable action. */
+export async function convertToCheckbox(filePath: string, id: string): Promise<void> {
+  const completed: ReturnType<typeof checkboxChanges> = [];
+  const refresh = async () => {
+    for (const change of completed) await refetchFor(change.id, filePath);
+  };
+  try {
+    const file = S().files[filePath];
+    const bullet = file && findBullet(file.bullets, id)?.bullet;
+    if (!bullet) throw new Error("This bullet is no longer available.");
+    // Load before making changes: a collapsed folder's children may not be cached.
+    const children = isFolderBullet(bullet)
+      ? (await S().loadFile(folderFilePath(bullet))).bullets
+      : bullet.children;
+    for (const change of checkboxChanges(bullet, children)) {
+      await api.patchBullet(change.id, { text: change.text });
+      completed.push(change);
+    }
+  } catch (e) {
+    fail(e);
+  } finally {
+    // Even a partially completed request remains undoable if a later write fails.
+    if (completed.length) {
+      S().pushUndo({
+        label: "convert to checkbox",
+        undo: async () => {
+          try { for (const c of completed) await api.patchBullet(c.id, { text: c.before }); }
+          finally { await refresh(); }
+        },
+        redo: async () => {
+          try { for (const c of completed) await api.patchBullet(c.id, { text: c.text }); }
+          finally { await refresh(); }
+        },
+      });
+      try { await refresh(); } catch (e) { fail(e); }
+    }
   }
 }

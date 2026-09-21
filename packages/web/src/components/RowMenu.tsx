@@ -38,6 +38,7 @@ export function RowMenu({ row, rowIndex, handlers, close, className = "menu" }: 
     <div className={className} role="menu">
       {item("Zoom in", () => handlers.zoom(rowIndex))}
       {item(struck ? "Remove strike" : "Strike through", () => setText(toggleStyle(b.text, "strike")))}
+      {item("Convert to checkbox", () => { void ops.convertToCheckbox(row.filePath, b.id); })}
       {check === null && item("Add checkbox", () => setText(addCheckbox(b.text)))}
       {check === "checkbox" && item("Check ☑", () => setText(setChecked(b.text, true)))}
       {check === "checked" && item("Uncheck ☐", () => setText(setChecked(b.text, false)))}
