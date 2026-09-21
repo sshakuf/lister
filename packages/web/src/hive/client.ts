@@ -90,7 +90,13 @@ export const hive = {
         publish({state});
       }
       return status.enabled;
-    })().catch(error=>{initialization=undefined;throw error;});
+    })().catch(error=>{
+      initialization=undefined;
+      // Startup may finish before lifecycle event listeners attach or reattach.
+      // Derive authentication state from the response as well as browser events.
+      publish({initialized:true,online:false,authRequired:error instanceof ApiError && error.status===401 || view.authRequired});
+      throw error;
+    });
   },
   sync():Promise<void> {
     return syncing ??= (async()=>{
