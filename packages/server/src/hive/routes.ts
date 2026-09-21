@@ -1,40 +1,62 @@
+import { GoogleAuth, SESSION_COOKIE, FLOW_COOKIE, cookie, readCookie } from '../auth/google.js';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { newId, opmlToBullets, splitMetadata, findBullet, insertBullet, removeBullet, updateBullet, moveBullet, walk, type Bullet, type OutlineFile } from '@lister/core';
 import type { SharedFile } from '@lister/core/hive';
 import { completeDirs } from '../fsdirs.js';
 import { HiveAgent, HiveError } from './agent.js';
-export function registerHiveRoutes(app: FastifyInstance, agent: HiveAgent, rootPath: string, onEnable: () => Promise<void>, beforeEnable: () => Promise<void> = async () => {}) {
+export function registerHiveRoutes(app: FastifyInstance, agent: HiveAgent, rootPath: string, onEnable: () => Promise<void>, beforeEnable: () => Promise<void> = async () => {}, google?: GoogleAuth) {
     const local = (req: FastifyRequest) => { let host = ''; try {
         host = new URL(`http://${req.headers.host}`).hostname;
     }
     catch {
         return false;
     } return ['127.0.0.1', 'localhost', '[::1]'].includes(host) && ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip) && !req.headers['x-forwarded-for'] && !req.headers.forwarded; };
-    const authorized = (req: FastifyRequest) => {
-        const bearer = req.headers.authorization?.replace(/^Bearer /, '');
-        const cookie = req.headers.cookie?.split(';').map(s => s.trim()).find(s => s.startsWith('lister_session='))?.slice(15);
-        return local(req) || !!((bearer || cookie) && agent.sessionMatches(bearer || cookie!));
-    };
+    const hiveId = () => agent.enabled ? agent.response().hiveId : agent.deviceId;
+    const browserToken = (req: FastifyRequest) => readCookie(req.headers.cookie, SESSION_COOKIE);
+    const bearerValid = (req: FastifyRequest) => !!req.headers.authorization?.startsWith('Bearer ') && agent.sessionMatches(req.headers.authorization.slice(7));
+    const browserValid = (req: FastifyRequest) => !!google?.authenticate(browserToken(req), hiveId());
+    const authorized = (req: FastifyRequest) => local(req) || bearerValid(req) || browserValid(req);
     app.addHook('onRequest', async (req, reply) => {
         const url = req.url.split('?')[0];
-        if (!url.startsWith('/api/') && url !== '/ws')
-            return;
+        if (!url.startsWith('/api/') && url !== '/ws') return;
         const origin = req.headers.origin;
-        if (origin && new URL(origin).host !== req.headers.host)
-            return reply.code(403).send({ error: 'Cross-origin requests are not allowed' });
-        if (url.startsWith('/api/hive/peer/'))
-            return;
-        if (url === '/api/health')
-            return;
-        if (url === '/api/hive/session')
-            return;
-        if (url === '/api/hive/status' && !agent.enabled) return;
-        if (url === '/api/hive/status' && !authorized(req))
-            return reply.code(401).send({ error: 'Enter the device access token to connect', locked: true });
-        if ((agent.enabled || url.startsWith('/api/hive/')) && !authorized(req))
-            return reply.code(401).send({ error: 'Device access token required' });
+        if (origin) {
+            let valid = false;
+            try { const parsed=new URL(origin); valid=parsed.origin===origin && parsed.host===req.headers.host; } catch {}
+            if (!valid) return reply.code(403).send({error:'Cross-origin requests are not allowed'});
+        }
+        if (url.startsWith('/api/hive/peer/')) return;
+        if (['/api/hive/auth/config','/api/hive/auth/google/start','/api/hive/auth/google/callback'].includes(url)) return;
+        if (url === '/api/health' || url === '/api/hive/session') return;
+        // Explicit credentials and local CLI calls are not ambient browser credentials.
+        if (!bearerValid(req) && browserValid(req) && (url === '/ws' || !['GET','HEAD','OPTIONS'].includes(req.method)) && origin !== google?.config.origin)
+            return reply.code(403).send({error:'Same-origin request required'});
+        if (url === '/api/hive/status' && !agent.enabled && !google) return;
+        if ((agent.enabled || google || url.startsWith('/api/hive/')) && !authorized(req))
+            return reply.code(401).send({error:'Sign in or enter the device access token to connect',locked:true});
     });
+    app.get('/api/hive/auth/config', async (_req,reply) => { reply.header('Cache-Control','no-store'); return google ? {google:true,loginUrl:google.config.origin+'/api/hive/auth/google/start'} : {google:false}; });
+    app.get('/api/hive/auth/google/start', async (req,reply) => {
+        reply.header('Cache-Control','no-store').header('Referrer-Policy','no-referrer');
+        if(!google)return reply.code(404).send({error:'Google login is not configured'});
+        if(req.headers.host!==new URL(google.config.origin).host)return reply.redirect(google.config.origin+'/api/hive/auth/google/start');
+        try { const flow=google.start(hiveId());return reply.header('Set-Cookie',cookie(FLOW_COOKIE,flow.browser,600)).redirect(flow.url); }
+        catch {return reply.code(503).send({error:'Google login unavailable'});}
+    });
+    app.get<{Querystring:{state?:string;code?:string}}>('/api/hive/auth/google/callback', async(req,reply)=>{
+        reply.header('Cache-Control','no-store').header('Referrer-Policy','no-referrer');
+        if(!google)return reply.code(404).send({error:'Google login is not configured'});
+        const clear=cookie(FLOW_COOKIE,'',0);
+        try {
+            if(req.headers.host!==new URL(google.config.origin).host)throw new Error();
+            const session=await google.finish(req.query.state??'',readCookie(req.headers.cookie,FLOW_COOKIE),req.query.code??'',hiveId(),req.headers['user-agent']??'Browser');
+            return reply.header('Set-Cookie',[clear,cookie(SESSION_COOKIE,session.token,30*86400)]).redirect(google.config.origin+'/');
+        } catch {return reply.header('Set-Cookie',clear).redirect(google.config.origin+'/?login=failed');}
+    });
+    app.get('/api/hive/auth/sessions', async(req,reply)=>{reply.header('Cache-Control','no-store');return {sessions:google?.sessions(hiveId(),browserToken(req))??[]};});
+    app.post<{Params:{id:string}}>('/api/hive/auth/sessions/:id/revoke', async(req)=>{google?.revoke(req.params.id,hiveId());return {ok:true};});
+    app.post('/api/hive/auth/logout', async(req,reply)=>{google?.logout(browserToken(req),hiveId());return reply.header('Set-Cookie',cookie(SESSION_COOKIE,'',0)).send({ok:true});});
     app.addHook('preHandler', async (req, reply) => {
         const url = req.url.split('?')[0];
         if (agent.enabled && url !== '/api/health' && url.startsWith('/api/') && !url.startsWith('/api/hive/')) {

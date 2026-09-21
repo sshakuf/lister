@@ -1,3 +1,4 @@
+import type { GoogleAuth } from './auth/google.js';
 import type { HiveAgent } from "./hive/agent.js";
 import { registerHiveRoutes } from "./hive/routes.js";
 import path from "node:path";
@@ -21,6 +22,7 @@ export interface AppDeps {
   webDist?: string;
   logger?: boolean;
   hive?: HiveAgent;
+  googleAuth?: GoogleAuth;
   onHiveEnable?: () => Promise<void>;
   beforeHiveEnable?: () => Promise<void>;
 }
@@ -29,8 +31,8 @@ type Socket = { send(data: string): void; readyState: number };
 
 export function buildApp(deps: AppDeps): FastifyInstance & { broadcast(msg: object): void } {
   const { store, search, admin } = deps;
-  const app = Fastify({ logger: deps.logger ?? false, bodyLimit: 16 * 1024 * 1024 });
-  if (deps.hive) registerHiveRoutes(app, deps.hive, store.rootPath, deps.onHiveEnable ?? (async () => {}), deps.beforeHiveEnable);
+  const app = Fastify({ logger: deps.logger ? { serializers: { req: (req: {method:string;url:string}) => ({method:req.method,url:req.url.split('?')[0]}) } } : false, bodyLimit: 16 * 1024 * 1024 });
+  if (deps.hive) registerHiveRoutes(app, deps.hive, store.rootPath, deps.onHiveEnable ?? (async () => {}), deps.beforeHiveEnable, deps.googleAuth);
   const sockets = new Set<Socket>();
   const broadcast = (msg: object) => {
     const data = JSON.stringify(msg);

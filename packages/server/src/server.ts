@@ -1,3 +1,4 @@
+import { GoogleAuth, loadGoogleConfig } from './auth/google.js';
 import path from "node:path";
 import { HiveAgent } from "./hive/agent.js";
 import { loadConfig, writeServerInfo, removeServerInfo, type Config } from "./config.js";
@@ -17,6 +18,8 @@ export async function startServer(opts: { home?: string; port?: number; host?: s
   const cfg = loadConfig(opts.home);
   if (opts.port) cfg.port = opts.port;
   if (opts.host) cfg.host = opts.host;
+  const googleConfig = loadGoogleConfig(cfg.listerDir);
+  const googleAuth = googleConfig ? new GoogleAuth(cfg.listerDir, googleConfig) : undefined;
   const hive = new HiveAgent(path.join(cfg.listerDir, "hive"));
   const search = new Search();
   let app: ReturnType<typeof buildApp> | null = null;
@@ -29,7 +32,7 @@ export async function startServer(opts: { home?: string; port?: number; host?: s
   });
   if (hive.enabled) await store.close();
   const admin = new Admin(store);
-  app = buildApp({ store, search, admin, logger: opts.logger, webDist: opts.webDist, hive, onHiveEnable: () => store.close(), beforeHiveEnable: () => store.flush() });
+  app = buildApp({ store, search, admin, logger: opts.logger, webDist: opts.webDist, hive, googleAuth, onHiveEnable: () => store.close(), beforeHiveEnable: () => store.flush() });
   await app.listen({ port: cfg.port, host: cfg.host });
   const address = app.server.address();
   const port = typeof address === "object" && address ? address.port : cfg.port;
@@ -42,6 +45,7 @@ export async function startServer(opts: { home?: string; port?: number; host?: s
     removeServerInfo(cfg.listerDir);
     await store.close();
     await app!.close();
+    googleAuth?.close();
   };
   return { port, host: cfg.host, cfg, close };
 }

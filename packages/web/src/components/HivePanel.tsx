@@ -1,19 +1,27 @@
-import { useState } from 'react';
+import { request, logout, type BrowserSession } from '../hive/http';
+import { useEffect, useState } from 'react';
 import { hive, useHive } from '../hive/client';
 import { api } from '../api';
 import { useStore } from '../store';
 
 export function HiveLogin() {
+  const view=useHive();
+  const [config,setConfig]=useState<{google:boolean;loginUrl?:string}>();
+  useEffect(()=>{void request<{google:boolean;loginUrl?:string}>('GET','/api/hive/auth/config').then(setConfig).catch(()=>{});},[]);
   const [token,setToken]=useState('');
   const [error,setError]=useState('');
   const [busy,setBusy]=useState(false);
   return <section className="hive-login">
     <h2>Connect to this computer</h2>
-    <p>Run <code>lister hive token</code> on the computer serving this page, then enter its access token.</p>
+    {config?.google && <p>{view.saving || view.drafts ? 'Saving edits before sign-in…' : <a className="button" href={config.loginUrl}>Sign in with Google</a>}</p>}
+    {new URLSearchParams(window.location.search).get('login')==='failed' && <p className="error-inline">Google sign-in failed. Use the owner account and try again.</p>}
+    <p>Sign-in needs an internet connection. Saved lists and pending edits stay on this browser.</p>
+    <details open={!config?.google}><summary>Use a recovery token</summary>
+    <p>For recovery, run <code>lister hive token</code> on the computer serving this page, then enter its access token.</p>
     <form onSubmit={async e=>{e.preventDefault();setBusy(true);try{await hive.login(token.trim());await useStore.getState().init();setToken('');setError('');}catch(error){setError((error as Error).message);}finally{setBusy(false);}}}>
       <label>Device access token <input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} required /></label>
       <button disabled={busy || !token.trim()} type="submit">{busy?'Connecting…':'Connect'}</button>
-    </form>
+    </form></details>
     {error && <p className="error-inline">{error}</p>}
   </section>;
 }
@@ -40,6 +48,7 @@ export function HivePanel() {
     <h2>Hive</h2>
     {error && <p className="error-inline">{error}</p>}
     {view.authRequired && <HiveLogin />}
+    {!view.authRequired && <BrowserSessions />}
     {!view.enabled ? <>
       <p>Share one outline across computers. Each computer keeps ownership of its local Outline Files. This browser saves edits while offline.</p>
       <label>Computer label <input value={label} onChange={e=>setLabel(e.target.value)} placeholder="Laptop" /></label>
@@ -89,4 +98,22 @@ export function HivePanel() {
       </>}
     </>}
   </section>;
+}
+
+function BrowserSessions() {
+  const [sessions,setSessions]=useState<BrowserSession[]>([]);
+  const [google,setGoogle]=useState(false);
+  const [error,setError]=useState('');
+  const [busy,setBusy]=useState(false);
+  const refresh=async()=>{const result=await request<{sessions:BrowserSession[]}>('GET','/api/hive/auth/sessions');setSessions(result.sessions);};
+  useEffect(()=>{void request<{google:boolean}>('GET','/api/hive/auth/config').then(async config=>{setGoogle(config.google);if(config.google)await refresh();}).catch(()=>{});},[]);
+  const run=async(fn:()=>Promise<void>)=>{setBusy(true);setError('');try{await fn();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
+  if(!google)return null;
+  return <details><summary>Browser sign-in sessions</summary>
+    <p>Signing out or revoking a browser keeps its downloaded lists and pending edits. This does not erase data from that browser.</p>
+    {error && <p className="error-inline">{error}</p>}
+    <button disabled={busy} onClick={()=>run(refresh)}>Refresh sessions</button>
+    <ul>{sessions.map(session=><li key={session.id}>{session.current?'This browser':session.label || 'Browser'} · expires {new Date(session.expires).toLocaleDateString()} <button disabled={busy} onClick={()=>run(async()=>{if(session.current){await logout();await hive.sync();}else{await request('POST',`/api/hive/auth/sessions/${session.id}/revoke`);await refresh();}})}>Revoke</button></li>)}</ul>
+    <button disabled={busy} onClick={()=>run(async()=>{await logout();await hive.sync();})}>Sign out of this browser</button>
+  </details>;
 }

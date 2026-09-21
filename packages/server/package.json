@@ -17,7 +17,8 @@
     "@fastify/websocket": "^11.0.0",
     "@lister/core": "workspace:*",
     "chokidar": "^4.0.0",
-    "fastify": "^5.2.0"
+    "fastify": "^5.2.0",
+    "jose": "^6.2.12"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

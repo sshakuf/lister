@@ -11,7 +11,7 @@ test('built shell caches exact assets and never intercepts API, auth, or another
  vm.runInNewContext(shellWorker(['index.html','assets/index-123.js','assets/index-456.css']),{self,caches,URL,Promise,fetch});
  await new Promise<void>(resolve=>listeners.install({waitUntil:(promise:Promise<void>)=>promise.then(resolve)}));
  assert.deepEqual(Array.from(cached),['/assets/index-123.js','/assets/index-456.css','/index.html']);
- for(const path of ['/api/hive/snapshot','/api/hive/session','https://other.test/assets/index-123.js']) {
+ for(const path of ['/api/hive/snapshot','/api/hive/session','/api/hive/auth/google/start','/api/hive/auth/google/callback?code=secret&state=state','https://other.test/assets/index-123.js']) {
   let intercepted=false;listeners.fetch({request:new Request(new URL(path,'https://example.test')),respondWith:()=>{intercepted=true;}});assert.equal(intercepted,false);
  }
  let intercepted=false;listeners.fetch({request:new Request('https://example.test/assets/index-123.js',{headers:{authorization:'Bearer token'}}),respondWith:()=>{intercepted=true;}});assert.equal(intercepted,false);
