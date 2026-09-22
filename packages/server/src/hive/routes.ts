@@ -19,6 +19,11 @@ export function registerHiveRoutes(app: FastifyInstance, agent: HiveAgent, rootP
     const authorized = (req: FastifyRequest) => local(req) || bearerValid(req) || browserValid(req);
     app.addHook('onRequest', async (req, reply) => {
         const url = req.url.split('?')[0];
+        // Home Screen shortcuts can retain an old HTTP host/port. Enter the
+        // configured HTTPS origin before login so the Secure cookie is usable.
+        if (google && req.method === 'GET' && (url === '/' || url === '/index.html')
+            && !local(req) && req.headers.host !== new URL(google.config.origin).host)
+            return reply.redirect(google.config.origin + '/');
         if (!url.startsWith('/api/') && url !== '/ws') return;
         const origin = req.headers.origin;
         if (origin) {

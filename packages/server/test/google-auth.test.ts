@@ -59,6 +59,15 @@ test('HTTP cookies require exact Origin, coexist with stale bearer, and logout r
  const auth=new GoogleAuth(dir,config,{keys,exchange:async()=>new SignJWT({sub:'owner',email:config.ownerEmail,email_verified:true,nonce}).setProtectedHeader({alg:'RS256'}).setIssuer('https://accounts.google.com').setAudience('client').setIssuedAt().setExpirationTime('5m').sign(privateKey)});
  const agent=new HiveAgent(path.join(dir,'hive'));agent.create('test','Mini',root);const app=Fastify();registerHiveRoutes(app,agent,root,async()=>{},undefined,auth);
  t.after(async()=>{await app.close();auth.close();agent.close();fs.rmSync(dir,{recursive:true,force:true});});
+ app.get('/',async()=>({page:'Lister'}));
+ for(const url of ['/', '/index.html']) {
+  const old=await app.inject({url,headers:{host:'mini.example:7433'}});
+  assert.equal(old.statusCode,302);
+  assert.equal(old.headers.location,config.origin+'/');
+ }
+ assert.equal((await app.inject({url:'/',headers:{host:'mini.example'}})).statusCode,200);
+ assert.equal((await app.inject({url:'/',headers:{host:'localhost'}})).statusCode,200);
+ assert.equal((await app.inject({url:'/api/hive/status',headers:{host:'mini.example:7433'}})).statusCode,401);
  const headers={host:'mini.example'};
  const start=await app.inject({url:'/api/hive/auth/google/start?returnTo=https://evil.example',headers});const location=new URL(start.headers.location!);nonce=location.searchParams.get('nonce')!;
  const flowCookie=String(start.headers['set-cookie']).split(';')[0];

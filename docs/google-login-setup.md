@@ -39,7 +39,7 @@ chmod 600 ~/.lister/google-auth.json
 
 Restart the Lister daemon after installing configuration. Open the HTTPS app and choose Continue with Google. Sign in as the configured owner. The first successful verified sign-in binds the owner to Google's stable account ID; other accounts cannot enroll themselves.
 
-Missing Google configuration keeps existing recovery-token login available. Local CLI access on the serving machine remains available. Browser sessions last 30 days and survive daemon restarts; sign in again after expiration. Each browser session is independent and can be revoked without disconnecting computer sync.
+Missing Google configuration keeps existing recovery-token login available. Local CLI access on the serving machine remains available. Use the configured HTTPS origin for bookmarks and Home Screen installs. When Google login is configured, remote visits to `/` or `/index.html` on an older host or port redirect to that origin; loopback access and API requests retain their existing behavior. Secure sign-in cookies cannot authenticate an old HTTP address. Browser sessions last 30 days and survive daemon restarts; sign in again after expiration. Each browser session is independent and can be revoked without disconnecting computer sync.
 
 ## Offline and recovery
 
