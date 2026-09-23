@@ -151,7 +151,7 @@ main { flex: 1; }
   .row.folder .dot { background: var(--accent-bg); }
   .content { padding: 4px 6px; font-size: 1.08em; }
   .outline { padding: 12px 10px 200px; }
-  .cb { font-size: 1.2em; padding-right: 6px; }
+
 }
 .menu { position: absolute; right: 0; top: 26px; background: var(--modal); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); display: flex; flex-direction: column; min-width: 220px; z-index: 10; padding: 4px; }
 .menu button { border: none; text-align: left; padding: 6px 10px; border-radius: 6px; }
@@ -274,3 +274,26 @@ main { flex: 1; }
 .hive-conflict pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow: auto; }
 .hive-indicator { font-size: 12px; max-width: 210px; text-align: right; }
 @media (max-width: 600px) { .hive-indicator { max-width: 105px; font-size: 10px; } .hive-status { grid-template-columns: 1fr; } }
+
+/* Checkbox controls share the same geometry while reading and editing. */
+.cb { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; flex: 0 0 36px; vertical-align: middle; touch-action: manipulation; border-radius: 6px; }
+.cb-symbol { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 2px solid currentColor; border-radius: 4px; font-size: 18px; font-weight: 700; line-height: 1; }
+.cb.on .cb-symbol { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.cb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.checkbox-editor { display: flex; flex-wrap: wrap; align-items: baseline; flex: 1 1 0; min-width: 0; }
+.edit-part { display: flex; align-items: flex-start; flex: 1 1 auto; min-width: 0; width: 100%; }
+.edit-part .edit { min-width: 0; padding-top: 5px; }
+.edit-part:only-child:not(:has(.cb)) .edit { padding-top: 0; }
+.edit-toolbar { transform: translateY(-100%); }
+.edit-toolbar.keyboard-open { padding-bottom: 6px; }
+.edit-toolbar-row { overflow-x: auto; }
+.edit-toolbar-row button { flex: 1 0 44px; min-width: 44px; height: 44px; }
+.edit-toolbar-row button:last-child { min-width: 54px; background: var(--bg); color: var(--accent); font-size: 14px; font-weight: 600; }
+.menu.sheet { max-height: min(45vh, calc(var(--edit-viewport-height, 100vh) - 140px)); overflow-y: auto; }
+.edit-toolbar-insert { display: flex; gap: 8px; margin-bottom: 8px; }
+.edit-toolbar-insert button { min-height: 44px; flex: 1; }
+@media (hover: none), (pointer: coarse) {
+  .cb { width: 44px; height: 44px; flex-basis: 44px; }
+  .cb-symbol { width: 26px; height: 26px; font-size: 22px; }
+  .edit-part .edit { padding-top: 9px; font-size: max(16px, 1em); }
+}

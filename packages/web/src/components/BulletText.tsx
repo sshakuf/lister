@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { parseSegments, isStyleAnnotation, URL_RE } from "../format";
+import { Checkbox } from "./Checkbox";
 import { api } from "../api";
 import { revealBullet } from "../navigate";
 
@@ -80,23 +81,7 @@ export function BulletText({ text, onToggleCheck }: Props) {
           return (
             <span key={i} className={s.kinds.map((k) => `st-${k}`).join(" ")}>
               {box && (
-                <button
-                  type="button"
-                  className={`cb ${checked ? "on" : ""}`}
-                  aria-checked={checked}
-                  role="checkbox"
-                  title={checked ? "Uncheck" : "Check"}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleCheck?.(!checked);
-                  }}
-                >
-                  {checked ? "☑" : "☐"}
-                </button>
+                <Checkbox checked={checked} onChange={(on) => onToggleCheck?.(on)} />
               )}
               {s.value ?? ""}
             </span>

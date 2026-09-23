@@ -10,6 +10,7 @@ import * as ops from "../ops";
 import { zoomIntoRow } from "../navigate";
 import { BulletRow, type RowHandlers } from "./BulletRow";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { splitBullet } from "../checkbox-editing";
 import { EditToolbar } from "./EditToolbar";
 
 const isMac = navigator.platform.toLowerCase().includes("mac");
@@ -162,11 +163,11 @@ export function Outline() {
       ops.deleteBullet(r.filePath, r.bullet.id);
       if (i > 0) focusRow(i - 1, rows[i - 1].bullet.text.length);
     },
-    onKeyDown(i, e, draft, setDraft) {
+    onKeyDown(i, e, draft, setDraft, selection) {
       const r = rows[i];
       if (!r) return;
       const el = e.currentTarget;
-      const caret = el.selectionStart ?? draft.length;
+      const caret = selection?.start ?? el.selectionStart ?? draft.length;
       const b = r.bullet;
       const from: ops.Position = { filePath: r.filePath, parentId: r.parentId, index: r.index };
 
@@ -207,10 +208,10 @@ export function Outline() {
           return;
         }
         if (e.shiftKey) return; // notes editing is v2
-        const before = draft.slice(0, caret);
-        const after = draft.slice(caret);
+        const { before, after } = splitBullet(draft, caret, selection?.end ?? el.selectionEnd);
+        setDraft(before); // cancel the old debounced edit before it can overwrite the split
         if (before !== b.text) ops.patchBullet(r.filePath, b.id, { text: before }, { undo: false });
-        const goesInside = !isFolderBullet(b) && b.children.length > 0 && r.expanded && after === "" && before.length > 0;
+        const goesInside = !isFolderBullet(b) && b.children.length > 0 && r.expanded && (after === "" || after === "[checkbox:]") && before.length > 0;
         if (goesInside) ops.addBullet(r.filePath, b.id, 0, after);
         else if (isFolderBullet(b) && r.expanded && r.childFile) {
           // expanded Folder Bullet: new first child goes into its Outline File (load it if needed)

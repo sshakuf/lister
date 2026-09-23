@@ -10,10 +10,12 @@ import { BulletText } from "./BulletText";
 import { AnnotationMenu } from "./AnnotationMenu";
 import { useStore } from "../store";
 import { hive } from "../hive/client";
+import { editParts, replacePart, sourceCaret, labelCaret } from "../checkbox-editing";
+import { Checkbox } from "./Checkbox";
 import { toolbarTouching } from "../ui";
 
 export interface RowHandlers {
-  onKeyDown(rowIndex: number, e: React.KeyboardEvent<HTMLTextAreaElement>, draft: string, setDraft: (v: string) => void): void;
+  onKeyDown(rowIndex: number, e: React.KeyboardEvent<HTMLTextAreaElement>, draft: string, setDraft: (v: string) => void, selection?: { start: number; end: number }): void;
   /** Persist edited text. Keyed by file + id so a delayed commit can never hit the wrong (or a deleted) bullet. */
   commit(filePath: string, id: string, draft: string): void;
   zoom(rowIndex: number): void;
@@ -39,7 +41,10 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
   const editing = focus?.id === b.id;
   const [draft, setDraft] = useState(b.text);
   const dirty = useRef(false);
-  const ta = useRef<HTMLTextAreaElement>(null);
+  const ta = useRef<HTMLTextAreaElement | null>(null);
+  const editor = useRef<HTMLDivElement>(null);
+  const pendingCaret = useRef<number | null>(null);
+  const parts = editParts(draft);
   const commitTimer = useRef<number | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const folder = isFolderBullet(b);
@@ -53,7 +58,7 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
   const [caretPos, setCaretPos] = useState(0);
   const [acDismissed, setAcDismissed] = useState<string | null>(null);
   const [acSel, setAcSel] = useState(0);
-  const completion = editing ? annotationCompletion(draft, caretPos) : null;
+  const completion = editing && !parts.some(p => p.checked !== null && caretPos >= p.start && caretPos <= p.start + p.raw.length) ? annotationCompletion(draft, caretPos) : null;
   const acKey = completion ? `${completion.start}:${completion.typed}` : null;
   const acOpen = completion !== null && acDismissed !== acKey;
   const acSelected = Math.min(acSel, (completion?.matches.length ?? 1) - 1);
@@ -62,12 +67,31 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
     if (!completion) return;
     const { text, caret } = applyCompletion(draft, caretPos, completion, completion.matches[i]);
     dirty.current = true;
+    pendingCaret.current = caret;
     setDraft(text);
     setCaretPos(caret);
     setAcSel(0);
     scheduleCommit(text);
-    requestAnimationFrame(() => ta.current?.setSelectionRange(caret, caret));
   };
+
+  useEffect(() => {
+    const node = editor.current;
+    if (!editing || !node) return;
+    const insertAnnotation = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLTextAreaElement) || target.getAttribute('aria-label') !== 'Checkbox label') return;
+      event.preventDefault();
+      const next = draft + (draft.endsWith(' ') ? '[' : ' [');
+      pendingCaret.current = next.length;
+      dirty.current = true;
+      setDraft(next);
+      setCaretPos(next.length);
+      setAcSel(0);
+      scheduleCommit(next);
+    };
+    node.addEventListener('lister-insert-annotation', insertAnnotation);
+    return () => node.removeEventListener('lister-insert-annotation', insertAnnotation);
+  }, [draft, editing]);
 
   // adopt server text unless the user has unsaved edits
   useEffect(() => {
@@ -76,16 +100,33 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
 
   // focus + caret when this row becomes the focused one
   useLayoutEffect(() => {
-    if (!editing || !ta.current) return;
-    const el = ta.current;
+    if (!editing || !editor.current) return;
+    const pos = focus?.caret ?? draft.length;
+    const found = parts.findIndex(p => pos < p.start + p.raw.length);
+    const index = found < 0 ? parts.length - 1 : found;
+    const el = editor.current.querySelectorAll('textarea')[index];
+    if (!el) return;
+    ta.current = el;
     el.focus();
-    const caret = Math.min(focus?.caret ?? draft.length, el.value.length);
+    const caret = labelCaret(parts[index], pos);
     el.setSelectionRange(caret, caret);
     autosize(el);
   }, [editing, focus?.caret]);
 
   useLayoutEffect(() => {
-    if (ta.current) autosize(ta.current);
+    if (pendingCaret.current !== null && editing && editor.current) {
+      const pos = pendingCaret.current;
+      pendingCaret.current = null;
+      const index = parts.findIndex(p => pos < p.start + p.raw.length);
+      const el = editor.current.querySelectorAll('textarea')[index < 0 ? parts.length - 1 : index];
+      if (el) {
+        const caret = labelCaret(parts[index < 0 ? parts.length - 1 : index], pos);
+        ta.current = el;
+        el.focus({ preventScroll: true });
+        el.setSelectionRange(caret, caret);
+      }
+    }
+    editor.current?.querySelectorAll('textarea').forEach(autosize);
   }, [draft, editing]);
 
   const cancelPending = () => {
@@ -163,24 +204,39 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
           setFocus({ id: b.id, caret: draft.length });
         }}>
           {editing ? (
+            <div className="checkbox-editor" ref={editor}>
+            {parts.map((part, partIndex) => <div className="edit-part" key={partIndex}>
+              {part.checked !== null && <Checkbox checked={part.checked} onChange={(on) => {
+                const next = parts.map((p, i) => i === partIndex
+                  ? { ...p, raw: setChecked(p.raw, on) } : p).map(p => p.raw).join('');
+                setDraft(next);
+                commitNow(next);
+              }} />}
             <textarea
-              ref={ta}
+              aria-label={part.checked === null ? "Bullet text" : "Checkbox label"}
+              dir="auto"
+              onFocus={(e) => { ta.current = e.currentTarget; }}
               className="edit"
               rows={1}
-              value={draft}
+              value={part.value}
               spellCheck={false}
               onChange={(e) => {
                 dirty.current = true;
-                setDraft(e.target.value);
-                setCaretPos(e.target.selectionStart ?? e.target.value.length);
+                const next = replacePart(parts, partIndex, e.target.value);
+                const updatedPart = part.checked === null ? { ...part, value: e.target.value } : editParts(next)[partIndex];
+                const pos = sourceCaret(updatedPart, e.target.selectionStart ?? e.target.value.length);
+                pendingCaret.current = (e.nativeEvent as InputEvent).isComposing ? null : pos;
+                setDraft(next);
+                setCaretPos(pos);
                 setAcSel(0);
-                scheduleCommit(e.target.value);
+                scheduleCommit(next);
               }}
-              onSelect={(e) => setCaretPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-              onClick={(e) => setCaretPos((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
-              onBlur={() => {
+              onSelect={(e) => setCaretPos(sourceCaret(part, (e.target as HTMLTextAreaElement).selectionStart ?? 0))}
+              onClick={(e) => setCaretPos(sourceCaret(part, (e.target as HTMLTextAreaElement).selectionStart ?? 0))}
+              onBlur={(e) => {
+                if (e.relatedTarget instanceof Node && editor.current?.contains(e.relatedTarget)) return;
                 if (dirty.current) commitNow(draft);
-                if (toolbarTouching()) {
+                if (toolbarTouching() && useStore.getState().focus?.id === b.id) {
                   // iOS Safari blurs the textarea when a fixed toolbar button is tapped; keep editing
                   requestAnimationFrame(() => ta.current?.focus({ preventScroll: true }));
                   return;
@@ -188,6 +244,7 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
                 if (useStore.getState().focus?.id === b.id) setFocus(null);
               }}
               onKeyDown={(e) => {
+                if (e.nativeEvent.isComposing) return;
                 if (acOpen && completion) {
                   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                     e.preventDefault();
@@ -207,6 +264,15 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
                   }
                 }
                 // deleting this bullet: drop any pending text commit so it cannot fire afterwards
+                if (e.key === "Backspace" && part.checked !== null && part.value === "" && !e.metaKey && !e.ctrlKey) {
+                  e.preventDefault();
+                  const next = parts.filter((_, i) => i !== partIndex).map(p => p.raw).join('');
+                  pendingCaret.current = part.start;
+                  setDraft(next);
+                  commitNow(next);
+                  setFocus({ id: b.id, caret: part.start });
+                  return;
+                }
                 if (e.key === "Backspace" && draft === "" && !e.metaKey && !e.ctrlKey) {
                   cancelPending();
                   dirty.current = false;
@@ -217,9 +283,11 @@ export function BulletRow({ row, rowIndex, handlers }: Props) {
                   cancelPending();
                   dirty.current = false;
                   setDraft(v);
-                });
+                }, { start: sourceCaret(part, e.currentTarget.selectionStart), end: sourceCaret(part, e.currentTarget.selectionEnd) });
               }}
             />
+            </div>)}
+            </div>
           ) : (
             <div className="rendered">
               <BulletText text={draft} onToggleCheck={(on) => setText(setChecked(b.text, on))} />
