@@ -1,3 +1,4 @@
+import { plainText } from "../format";
 import { useStore } from "../store";
 import { zoomToCrumb } from "../navigate";
 
@@ -11,10 +12,10 @@ export function Breadcrumbs() {
           {i > 0 && <span className="crumb-sep">›</span>}
           {i < crumbs.length - 1 ? (
             <button className="crumb" onClick={() => zoomToCrumb(i)}>
-              {c.text || "(untitled)"}
+              {plainText(c.text) || "(untitled)"}
             </button>
           ) : (
-            <span className="crumb current">{c.text || "(untitled)"}</span>
+            <span className="crumb current">{plainText(c.text) || "(untitled)"}</span>
           )}
         </span>
       ))}

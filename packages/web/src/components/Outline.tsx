@@ -5,7 +5,7 @@ import { useStore } from "../store";
 import { useUi } from "../ui";
 import { flattenVisible, findBullet, type Row } from "../tree";
 import { isFolderBullet } from "../types";
-import { parseDateShorthand, parsePriorityShorthand, todayIso } from "../format";
+import { parseDateShorthand, parsePriorityShorthand, todayIso, plainText } from "../format";
 import * as ops from "../ops";
 import { zoomIntoRow } from "../navigate";
 import { BulletRow, type RowHandlers } from "./BulletRow";
@@ -291,7 +291,7 @@ export function Outline() {
   return (
     <div className="outline">
       <Breadcrumbs />
-      {crumbs.length > 1 && <h1 className="zoom-title">{title || "(untitled)"}</h1>}
+      {crumbs.length > 1 && <h1 className="zoom-title">{plainText(title ?? "") || "(untitled)"}</h1>}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
         <SortableContext items={rows.map((r) => r.bullet.id)} strategy={verticalListSortingStrategy}>
           <div className="rows">
